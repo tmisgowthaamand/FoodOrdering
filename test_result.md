@@ -111,11 +111,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Fixed order creation - switched from Supabase to MongoDB as Supabase orders table didn't exist. Tested with curl and order created successfully."
+      - working: true
+        agent: "testing"
+        comment: "Comprehensive testing completed. Tested both COD and Razorpay payment methods with realistic customer data. All order fields returned correctly. Orders stored properly in MongoDB with correct status values."
 
   - task: "Razorpay Create Order API"
     implemented: true
@@ -123,35 +126,56 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Tested with curl, Razorpay order creation works."
+      - working: true
+        agent: "testing"
+        comment: "Tested with amount in paise (59800 for ₹598). API correctly returns order_id, amount, currency (INR), and key_id. Razorpay integration working properly."
 
   - task: "Get Order API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Updated to use MongoDB, needs testing."
+      - working: true
+        agent: "testing"
+        comment: "Tested with valid and invalid order IDs. Valid IDs return complete order data, invalid IDs correctly return 404. MongoDB integration working properly."
 
   - task: "Razorpay Payment Verification API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Updated to use MongoDB, needs testing."
+      - working: true
+        agent: "testing"
+        comment: "Endpoint structure and error handling working correctly. Properly validates signature and returns appropriate error for invalid signatures. MongoDB order update logic implemented correctly."
+
+  - task: "Get All Orders API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Returns all orders as array, properly sorted by created_at in descending order. MongoDB query working correctly."
 
 frontend:
   - task: "Order Now Button Functionality"
