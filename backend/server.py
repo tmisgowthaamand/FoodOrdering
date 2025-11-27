@@ -224,10 +224,10 @@ async def get_order(order_id: str):
 
 @api_router.get("/orders")
 async def get_all_orders():
-    """Get all orders from Supabase"""
+    """Get all orders from MongoDB"""
     try:
-        result = supabase.table('orders').select("*").order('created_at', desc=True).execute()
-        return result.data
+        orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+        return orders
     except Exception as e:
         logger.error(f"Error fetching orders: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch orders: {str(e)}")
