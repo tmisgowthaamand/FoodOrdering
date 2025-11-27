@@ -11,6 +11,7 @@ import AppDownloadSection from './components/AppDownloadSection';
 import Footer from './components/Footer';
 import CartSidebar from './components/CartSidebar';
 import LoginModal from './components/LoginModal';
+import CheckoutPage from './components/CheckoutPage';
 import { products } from './data/mockData';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
@@ -19,6 +20,7 @@ function App() {
   const [cart, setCart] = useState({});
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState('home'); // 'home' or 'checkout'
 
   // Calculate cart count
   const cartCount = useMemo(() => {
@@ -38,6 +40,21 @@ function App() {
         duration: 2000,
       });
     }
+  };
+
+  // Handle checkout
+  const handleCheckout = () => {
+    setCurrentPage('checkout');
+  };
+
+  // Handle back to home
+  const handleBackToHome = () => {
+    setCurrentPage('home');
+  };
+
+  // Handle order success - clear cart
+  const handleOrderSuccess = () => {
+    setCart({});
   };
 
   // Filter products by category
@@ -65,6 +82,21 @@ function App() {
       description: `${category.itemCount} items available`,
     });
   };
+
+  // Render checkout page
+  if (currentPage === 'checkout') {
+    return (
+      <>
+        <Toaster position="top-right" richColors />
+        <CheckoutPage 
+          cart={cart} 
+          onBack={handleBackToHome}
+          onOrderSuccess={handleOrderSuccess}
+          onUpdateCart={handleAddToCart}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -160,6 +192,7 @@ function App() {
         onClose={() => setIsCartOpen(false)}
         cart={cart}
         onUpdateCart={handleAddToCart}
+        onCheckout={handleCheckout}
       />
 
       {/* Login Modal */}
