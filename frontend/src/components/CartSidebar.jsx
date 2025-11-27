@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { products } from '../data/mockData';
 
-const CartSidebar = ({ isOpen, onClose, cart, onUpdateCart }) => {
+const CartSidebar = ({ isOpen, onClose, cart, onUpdateCart, onCheckout }) => {
   const cartItems = Object.entries(cart)
     .filter(([_, qty]) => qty > 0)
     .map(([productId, quantity]) => {
@@ -27,6 +27,13 @@ const CartSidebar = ({ isOpen, onClose, cart, onUpdateCart }) => {
     const product = products.find((p) => p.id === productId);
     if (product) {
       onUpdateCart(product, newQuantity);
+    }
+  };
+
+  const handleCheckout = () => {
+    onClose();
+    if (onCheckout) {
+      onCheckout();
     }
   };
 
@@ -142,7 +149,10 @@ const CartSidebar = ({ isOpen, onClose, cart, onUpdateCart }) => {
                   <span>Total</span>
                   <span>₹{totalAmount}</span>
                 </div>
-                <Button className="w-full bg-[#8B2FC9] hover:bg-[#7a26b3] text-white py-4 rounded-xl font-semibold text-base">
+                <Button 
+                  onClick={handleCheckout}
+                  className="w-full bg-[#8B2FC9] hover:bg-[#7a26b3] text-white py-4 rounded-xl font-semibold text-base"
+                >
                   Proceed to Checkout
                 </Button>
               </div>
