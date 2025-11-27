@@ -15,6 +15,7 @@ import CheckoutPage from './components/CheckoutPage';
 import { products } from './data/mockData';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   const [cart, setCart] = useState({});
