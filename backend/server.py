@@ -166,14 +166,14 @@ async def verify_razorpay_payment(payment_data: VerifyPaymentRequest):
         raise HTTPException(status_code=500, detail=f"Payment verification error: {str(e)}")
 
 
-# Order Routes (Supabase)
+# Order Routes (MongoDB)
 @api_router.post("/orders")
 async def create_order(order_data: CreateOrderRequest):
-    """Create a new order and store in Supabase"""
+    """Create a new order and store in MongoDB"""
     try:
         order_id = str(uuid.uuid4())
         
-        # Prepare order data for Supabase
+        # Prepare order data for MongoDB
         order_doc = {
             "id": order_id,
             "items": [item.model_dump() for item in order_data.items],
@@ -191,8 +191,8 @@ async def create_order(order_data: CreateOrderRequest):
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
         
-        # Insert into Supabase
-        result = supabase.table('orders').insert(order_doc).execute()
+        # Insert into MongoDB
+        await db.orders.insert_one(order_doc)
         
         return {
             "success": True,
