@@ -235,14 +235,17 @@ async def get_all_orders():
 
 @api_router.patch("/orders/{order_id}/status")
 async def update_order_status(order_id: str, status: str):
-    """Update order status"""
+    """Update order status in MongoDB"""
     try:
-        result = supabase.table('orders').update({
-            'order_status': status,
-            'updated_at': datetime.now(timezone.utc).isoformat()
-        }).eq('id', order_id).execute()
+        result = await db.orders.update_one(
+            {"id": order_id},
+            {"$set": {
+                "order_status": status,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
         
-        if not result.data:
+        if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Order not found")
         
         return {"success": True, "message": "Order status updated"}
