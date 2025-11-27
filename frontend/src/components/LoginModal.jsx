@@ -406,7 +406,7 @@ const LoginModal = ({ isOpen, onClose }) => {
               </Button>
 
               <p className="text-center text-sm text-gray-600">
-                Didn't receive OTP?{' '}
+                {"Didn't receive OTP?"}{' '}
                 <button 
                   onClick={handleResendOtp}
                   disabled={isLoading}
