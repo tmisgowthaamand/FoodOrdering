@@ -147,16 +147,20 @@ async def verify_razorpay_payment(payment_data: VerifyPaymentRequest):
         }
         razorpay_client.utility.verify_payment_signature(params_dict)
         
-        # Update order status in Supabase
+        # Update order status in MongoDB
         try:
-            supabase.table('orders').update({
-                'payment_status': 'paid',
-                'razorpay_payment_id': payment_data.razorpay_payment_id,
-                'razorpay_order_id': payment_data.razorpay_order_id,
-                'updated_at': datetime.now(timezone.utc).isoformat()
-            }).eq('id', payment_data.order_id).execute()
+            await db.orders.update_one(
+                {"id": payment_data.order_id},
+                {"$set": {
+                    "payment_status": "paid",
+                    "razorpay_payment_id": payment_data.razorpay_payment_id,
+                    "razorpay_order_id": payment_data.razorpay_order_id,
+                    "order_status": "confirmed",
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
         except Exception as e:
-            logger.error(f"Error updating order in Supabase: {str(e)}")
+            logger.error(f"Error updating order in MongoDB: {str(e)}")
         
         return {"status": "success", "message": "Payment verified successfully"}
     except razorpay.errors.SignatureVerificationError:
