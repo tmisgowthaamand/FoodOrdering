@@ -197,9 +197,7 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Create Order API"
-    - "Razorpay Create Order API"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
