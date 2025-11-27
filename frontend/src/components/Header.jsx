@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, User, ShoppingCart, ChevronDown, Menu, X } from 'lucide-react';
+import { Search, MapPin, User, ShoppingCart, ChevronDown, Menu, X, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -7,14 +7,36 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from './ui/dropdown-menu';
 import { cities, deliveryAreas } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
 
 const Header = ({ cartCount = 0, onCartClick, onLoginClick }) => {
   const [selectedCity, setSelectedCity] = useState('Mumbai');
   const [selectedArea, setSelectedArea] = useState('Andheri East');
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  const { user, isAuthenticated, signOut, loading } = useAuth();
+
+  // Get display name from user
+  const getUserDisplayName = () => {
+    if (!user) return '';
+    // Try to get name from user metadata
+    const metadata = user.user_metadata || {};
+    if (metadata.full_name) return metadata.full_name;
+    if (metadata.name) return metadata.name;
+    // Fall back to email
+    if (user.email) return user.email.split('@')[0];
+    // Fall back to phone
+    if (user.phone) return user.phone;
+    return 'User';
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
@@ -88,15 +110,43 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick }) => {
 
           {/* Right Section */}
           <div className="flex items-center gap-2 md:gap-4">
-            {/* Login Button */}
-            <Button
-              variant="ghost"
-              onClick={onLoginClick}
-              className="hidden md:flex items-center gap-2 text-gray-700 hover:text-[#8B2FC9] hover:bg-purple-50"
-            >
-              <User className="w-5 h-5" />
-              <span className="font-medium">Login</span>
-            </Button>
+            {/* Login/User Button */}
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="hidden md:flex items-center gap-2 text-gray-700 hover:text-[#8B2FC9] hover:bg-purple-50"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#8B2FC9] text-white flex items-center justify-center text-sm font-semibold">
+                      {getUserDisplayName().charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-medium max-w-[100px] truncate">{getUserDisplayName()}</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-3 py-2">
+                    <p className="text-sm font-medium truncate">{getUserDisplayName()}</p>
+                    <p className="text-xs text-gray-500 truncate">{user?.email || user?.phone}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-red-600 cursor-pointer">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="ghost"
+                onClick={onLoginClick}
+                className="hidden md:flex items-center gap-2 text-gray-700 hover:text-[#8B2FC9] hover:bg-purple-50"
+              >
+                <User className="w-5 h-5" />
+                <span className="font-medium">Login</span>
+              </Button>
+            )}
 
             {/* Cart Button */}
             <Button
@@ -148,15 +198,37 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick }) => {
                 <p className="text-sm font-medium">{selectedArea}, {selectedCity}</p>
               </div>
             </div>
-            {/* Login */}
-            <Button
-              variant="outline"
-              onClick={onLoginClick}
-              className="w-full flex items-center justify-center gap-2"
-            >
-              <User className="w-5 h-5" />
-              <span>Login / Sign Up</span>
-            </Button>
+            {/* Login/User */}
+            {isAuthenticated ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 px-2">
+                  <div className="w-10 h-10 rounded-full bg-[#8B2FC9] text-white flex items-center justify-center text-lg font-semibold">
+                    {getUserDisplayName().charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-medium">{getUserDisplayName()}</p>
+                    <p className="text-xs text-gray-500">{user?.email || user?.phone}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleSignOut}
+                  className="w-full flex items-center justify-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>Sign Out</span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={onLoginClick}
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <User className="w-5 h-5" />
+                <span>Login / Sign Up</span>
+              </Button>
+            )}
           </div>
         )}
       </div>
