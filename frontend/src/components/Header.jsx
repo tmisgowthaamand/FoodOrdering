@@ -31,7 +31,7 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick }) => {
           {/* Logo */}
           <div className="flex items-center gap-2">
             <div className="text-2xl md:text-3xl font-bold text-[#8B2FC9] tracking-tight">
-              zepto
+              Foodeo
             </div>
           </div>
 
