@@ -277,7 +277,7 @@ const LoginModal = ({ isOpen, onClose }) => {
               </Button>
 
               <p className="text-center text-sm text-gray-600">
-                Don't have an account?{' '}
+                {"Don't have an account?"}{' '}
                 <button
                   onClick={() => setMode('signup')}
                   className="text-[#8B2FC9] font-semibold hover:underline"
