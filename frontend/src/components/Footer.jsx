@@ -46,7 +46,7 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <h2 className="text-3xl font-bold text-white mb-4">zepto</h2>
+            <h2 className="text-3xl font-bold text-white mb-4">Foodeo</h2>
             <p className="text-gray-400 text-sm mb-4">
               Groceries delivered in 10 minutes. Fresh produce, daily essentials & more.
             </p>
