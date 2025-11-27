@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import './App.css';
 import Header from './components/Header';
 import HeroBanner from './components/HeroBanner';
@@ -21,6 +21,9 @@ function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('home'); // 'home' or 'checkout'
+  
+  // Ref for products section
+  const productsSectionRef = useRef(null);
 
   // Calculate cart count
   const cartCount = useMemo(() => {
@@ -55,6 +58,18 @@ function App() {
   // Handle order success - clear cart
   const handleOrderSuccess = () => {
     setCart({});
+  };
+
+  // Handle Order Now click from Hero Banner
+  const handleOrderNowClick = () => {
+    // Scroll to products section
+    if (productsSectionRef.current) {
+      productsSectionRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+    toast.info('Browse our products and add items to cart!', {
+      description: 'Free delivery on all orders',
+      duration: 3000,
+    });
   };
 
   // Filter products by category
@@ -110,7 +125,7 @@ function App() {
       />
 
       {/* Hero Banner */}
-      <HeroBanner />
+      <HeroBanner onOrderNowClick={handleOrderNowClick} />
 
       {/* Category Grid */}
       <CategoryGrid onCategoryClick={handleCategoryClick} />
@@ -118,21 +133,24 @@ function App() {
       {/* Today's Deals */}
       <PromoBanner />
 
-      {/* Fruits & Vegetables Carousel */}
-      <ProductCarousel
-        title="Fruits & Vegetables"
-        products={fruitsAndVegetables}
-        onAddToCart={handleAddToCart}
-        cart={cart}
-      />
+      {/* Products Section - with ref for scrolling */}
+      <div ref={productsSectionRef} id="products-section">
+        {/* Fruits & Vegetables Carousel */}
+        <ProductCarousel
+          title="Fruits & Vegetables"
+          products={fruitsAndVegetables}
+          onAddToCart={handleAddToCart}
+          cart={cart}
+        />
 
-      {/* Dairy & Breakfast Carousel */}
-      <ProductCarousel
-        title="Dairy & Breakfast"
-        products={dairyProducts}
-        onAddToCart={handleAddToCart}
-        cart={cart}
-      />
+        {/* Dairy & Breakfast Carousel */}
+        <ProductCarousel
+          title="Dairy & Breakfast"
+          products={dairyProducts}
+          onAddToCart={handleAddToCart}
+          cart={cart}
+        />
+      </div>
 
       {/* Features Section */}
       <FeaturesSection />

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShoppingCart, Clock, Zap } from 'lucide-react';
 import { Button } from './ui/button';
 import { banners } from '../data/mockData';
 
-const HeroBanner = () => {
+const HeroBanner = ({ onOrderNowClick }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
@@ -19,6 +19,18 @@ const HeroBanner = () => {
 
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
+  };
+
+  const handleOrderNowClick = () => {
+    if (onOrderNowClick) {
+      onOrderNowClick();
+    } else {
+      // Default behavior: scroll to products section
+      const productsSection = document.getElementById('products-section');
+      if (productsSection) {
+        productsSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   };
 
   return (
@@ -47,7 +59,11 @@ const HeroBanner = () => {
                     <p className="text-sm md:text-lg opacity-90 mb-4 md:mb-6">
                       {banner.subtitle}
                     </p>
-                    <Button className="bg-white text-[#8B2FC9] hover:bg-gray-100 font-semibold px-6 py-2 md:px-8 md:py-3 rounded-full transition-all transform hover:scale-105">
+                    <Button 
+                      onClick={handleOrderNowClick}
+                      className="bg-white text-[#8B2FC9] hover:bg-gray-100 font-semibold px-6 py-2 md:px-8 md:py-3 rounded-full transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2"
+                    >
+                      <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
                       Order Now
                     </Button>
                   </div>
@@ -60,8 +76,14 @@ const HeroBanner = () => {
                       className="w-[300px] lg:w-[400px] h-[200px] lg:h-[280px] object-cover rounded-2xl shadow-2xl"
                     />
                     {/* Floating badge */}
-                    <div className="absolute -top-4 -right-4 bg-yellow-400 text-gray-900 px-4 py-2 rounded-full font-bold text-sm shadow-lg animate-bounce">
+                    <div className="absolute -top-4 -right-4 bg-yellow-400 text-gray-900 px-4 py-2 rounded-full font-bold text-sm shadow-lg animate-bounce flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
                       10 MIN
+                    </div>
+                    {/* Fast delivery badge */}
+                    <div className="absolute -bottom-2 -left-2 bg-green-500 text-white px-3 py-1.5 rounded-full font-semibold text-xs shadow-lg flex items-center gap-1">
+                      <Zap className="w-3 h-3" />
+                      Express Delivery
                     </div>
                   </div>
                 </div>

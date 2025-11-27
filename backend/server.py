@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime, timezone
 import razorpay
 from supabase import create_client, Client
+import json
 
 
 ROOT_DIR = Path(__file__).parent
@@ -144,7 +145,7 @@ async def create_razorpay_order(order_data: RazorpayOrderCreate):
 
 @api_router.post("/razorpay/verify-payment")
 async def verify_razorpay_payment(payment_data: VerifyPaymentRequest):
-    """Verify Razorpay payment signature"""
+    """Verify Razorpay payment signature and update order in Supabase"""
     try:
         # Verify signature
         params_dict = {
@@ -154,20 +155,18 @@ async def verify_razorpay_payment(payment_data: VerifyPaymentRequest):
         }
         razorpay_client.utility.verify_payment_signature(params_dict)
         
-        # Update order status in MongoDB
+        # Update order status in Supabase
         try:
-            await db.orders.update_one(
-                {"id": payment_data.order_id},
-                {"$set": {
-                    "payment_status": "paid",
-                    "razorpay_payment_id": payment_data.razorpay_payment_id,
-                    "razorpay_order_id": payment_data.razorpay_order_id,
-                    "order_status": "confirmed",
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }}
-            )
+            supabase.table('orders').update({
+                "payment_status": "paid",
+                "razorpay_payment_id": payment_data.razorpay_payment_id,
+                "razorpay_order_id": payment_data.razorpay_order_id,
+                "order_status": "confirmed",
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }).eq('id', payment_data.order_id).execute()
+            logger.info(f"Order {payment_data.order_id} updated in Supabase after payment verification")
         except Exception as e:
-            logger.error(f"Error updating order in MongoDB: {str(e)}")
+            logger.error(f"Error updating order in Supabase: {str(e)}")
         
         return {"status": "success", "message": "Payment verified successfully"}
     except razorpay.errors.SignatureVerificationError:
@@ -177,14 +176,14 @@ async def verify_razorpay_payment(payment_data: VerifyPaymentRequest):
         raise HTTPException(status_code=500, detail=f"Payment verification error: {str(e)}")
 
 
-# Order Routes (MongoDB)
+# Order Routes (Supabase)
 @api_router.post("/orders")
 async def create_order(order_data: CreateOrderRequest):
-    """Create a new order and store in MongoDB"""
+    """Create a new order and store in Supabase"""
     try:
         order_id = str(uuid.uuid4())
         
-        # Prepare order data for MongoDB
+        # Prepare order data for Supabase
         order_doc = {
             "id": order_id,
             "items": [item.model_dump() for item in order_data.items],
@@ -202,11 +201,9 @@ async def create_order(order_data: CreateOrderRequest):
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
         
-        # Insert into MongoDB
-        await db.orders.insert_one(order_doc)
-        
-        # Remove MongoDB's _id from response
-        order_doc.pop('_id', None)
+        # Insert into Supabase
+        result = supabase.table('orders').insert(order_doc).execute()
+        logger.info(f"Order {order_id} created in Supabase successfully")
         
         return {
             "success": True,
@@ -215,58 +212,55 @@ async def create_order(order_data: CreateOrderRequest):
             "order": order_doc
         }
     except Exception as e:
-        logger.error(f"Error creating order: {str(e)}")
+        logger.error(f"Error creating order in Supabase: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
 
 
 @api_router.get("/orders/{order_id}")
 async def get_order(order_id: str):
-    """Get order by ID from MongoDB"""
+    """Get order by ID from Supabase"""
     try:
-        result = await db.orders.find_one({"id": order_id}, {"_id": 0})
+        result = supabase.table('orders').select('*').eq('id', order_id).execute()
         
-        if not result:
+        if not result.data or len(result.data) == 0:
             raise HTTPException(status_code=404, detail="Order not found")
         
-        return result
+        return result.data[0]
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching order: {str(e)}")
+        logger.error(f"Error fetching order from Supabase: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch order: {str(e)}")
 
 
 @api_router.get("/orders")
 async def get_all_orders():
-    """Get all orders from MongoDB"""
+    """Get all orders from Supabase"""
     try:
-        orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
-        return orders
+        result = supabase.table('orders').select('*').order('created_at', desc=True).execute()
+        return result.data
     except Exception as e:
-        logger.error(f"Error fetching orders: {str(e)}")
+        logger.error(f"Error fetching orders from Supabase: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch orders: {str(e)}")
 
 
 @api_router.patch("/orders/{order_id}/status")
 async def update_order_status(order_id: str, status: str):
-    """Update order status in MongoDB"""
+    """Update order status in Supabase"""
     try:
-        result = await db.orders.update_one(
-            {"id": order_id},
-            {"$set": {
-                "order_status": status,
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            }}
-        )
+        result = supabase.table('orders').update({
+            "order_status": status,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }).eq('id', order_id).execute()
         
-        if result.matched_count == 0:
+        if not result.data or len(result.data) == 0:
             raise HTTPException(status_code=404, detail="Order not found")
         
         return {"success": True, "message": "Order status updated"}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating order status: {str(e)}")
+        logger.error(f"Error updating order status in Supabase: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update order status: {str(e)}")
 
 
