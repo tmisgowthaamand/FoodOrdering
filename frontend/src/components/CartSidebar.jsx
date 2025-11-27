@@ -156,7 +156,7 @@ const CartSidebar = ({ isOpen, onClose, cart, onUpdateCart }) => {
                 Your cart is empty
               </h3>
               <p className="text-gray-500 text-center mb-6">
-                Looks like you haven't added anything to your cart yet.
+                Looks like you have not added anything to your cart yet.
               </p>
               <Button
                 onClick={onClose}
