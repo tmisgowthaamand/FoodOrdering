@@ -11,7 +11,7 @@ from datetime import datetime
 import time
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://checkout-repair-8.preview.emergentagent.com/api"
+BACKEND_URL = "https://order-fix-supabase.preview.emergentagent.com/api"
 
 class BackendTester:
     def __init__(self):
