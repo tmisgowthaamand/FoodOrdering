@@ -198,6 +198,9 @@ async def create_order(order_data: CreateOrderRequest):
         # Insert into MongoDB
         await db.orders.insert_one(order_doc)
         
+        # Remove MongoDB's _id from response
+        order_doc.pop('_id', None)
+        
         return {
             "success": True,
             "order_id": order_id,
