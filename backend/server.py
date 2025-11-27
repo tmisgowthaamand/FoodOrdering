@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,9 +6,11 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
+import razorpay
+from supabase import create_client, Client
 
 
 ROOT_DIR = Path(__file__).parent
@@ -18,6 +20,16 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+# Razorpay client
+razorpay_client = razorpay.Client(
+    auth=(os.environ.get('RAZORPAY_KEY_ID'), os.environ.get('RAZORPAY_KEY_SECRET'))
+)
+
+# Supabase client
+supabase_url = os.environ.get('SUPABASE_URL')
+supabase_key = os.environ.get('SUPABASE_KEY')
+supabase: Client = create_client(supabase_url, supabase_key)
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -36,6 +48,41 @@ class StatusCheck(BaseModel):
 
 class StatusCheckCreate(BaseModel):
     client_name: str
+
+
+# Order Models
+class OrderItem(BaseModel):
+    product_id: int
+    name: str
+    price: float
+    quantity: int
+    image: str
+    weight: str
+
+class CustomerInfo(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    address: str
+    city: str
+    pincode: str
+
+class CreateOrderRequest(BaseModel):
+    items: List[OrderItem]
+    total_amount: float
+    customer: CustomerInfo
+    payment_method: str  # 'razorpay' or 'cod'
+
+class RazorpayOrderCreate(BaseModel):
+    amount: int  # Amount in paise
+    currency: str = "INR"
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    order_id: str
+
 
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
@@ -65,6 +112,146 @@ async def get_status_checks():
             check['timestamp'] = datetime.fromisoformat(check['timestamp'])
     
     return status_checks
+
+
+# Razorpay Routes
+@api_router.post("/razorpay/create-order")
+async def create_razorpay_order(order_data: RazorpayOrderCreate):
+    """Create a Razorpay order for payment"""
+    try:
+        razorpay_order = razorpay_client.order.create({
+            "amount": order_data.amount,
+            "currency": order_data.currency,
+            "payment_capture": 1
+        })
+        return {
+            "id": razorpay_order["id"],
+            "amount": razorpay_order["amount"],
+            "currency": razorpay_order["currency"],
+            "key_id": os.environ.get('RAZORPAY_KEY_ID')
+        }
+    except Exception as e:
+        logger.error(f"Error creating Razorpay order: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create payment order: {str(e)}")
+
+
+@api_router.post("/razorpay/verify-payment")
+async def verify_razorpay_payment(payment_data: VerifyPaymentRequest):
+    """Verify Razorpay payment signature"""
+    try:
+        # Verify signature
+        params_dict = {
+            'razorpay_order_id': payment_data.razorpay_order_id,
+            'razorpay_payment_id': payment_data.razorpay_payment_id,
+            'razorpay_signature': payment_data.razorpay_signature
+        }
+        razorpay_client.utility.verify_payment_signature(params_dict)
+        
+        # Update order status in Supabase
+        try:
+            supabase.table('orders').update({
+                'payment_status': 'paid',
+                'razorpay_payment_id': payment_data.razorpay_payment_id,
+                'razorpay_order_id': payment_data.razorpay_order_id,
+                'updated_at': datetime.now(timezone.utc).isoformat()
+            }).eq('id', payment_data.order_id).execute()
+        except Exception as e:
+            logger.error(f"Error updating order in Supabase: {str(e)}")
+        
+        return {"status": "success", "message": "Payment verified successfully"}
+    except razorpay.errors.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Payment verification failed")
+    except Exception as e:
+        logger.error(f"Error verifying payment: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Payment verification error: {str(e)}")
+
+
+# Order Routes (Supabase)
+@api_router.post("/orders")
+async def create_order(order_data: CreateOrderRequest):
+    """Create a new order and store in Supabase"""
+    try:
+        order_id = str(uuid.uuid4())
+        
+        # Prepare order data for Supabase
+        order_doc = {
+            "id": order_id,
+            "items": [item.model_dump() for item in order_data.items],
+            "total_amount": order_data.total_amount,
+            "customer_name": order_data.customer.name,
+            "customer_phone": order_data.customer.phone,
+            "customer_email": order_data.customer.email,
+            "customer_address": order_data.customer.address,
+            "customer_city": order_data.customer.city,
+            "customer_pincode": order_data.customer.pincode,
+            "payment_method": order_data.payment_method,
+            "payment_status": "pending" if order_data.payment_method == "razorpay" else "cod",
+            "order_status": "confirmed" if order_data.payment_method == "cod" else "pending",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Insert into Supabase
+        result = supabase.table('orders').insert(order_doc).execute()
+        
+        return {
+            "success": True,
+            "order_id": order_id,
+            "message": "Order created successfully",
+            "order": order_doc
+        }
+    except Exception as e:
+        logger.error(f"Error creating order: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
+
+
+@api_router.get("/orders/{order_id}")
+async def get_order(order_id: str):
+    """Get order by ID from Supabase"""
+    try:
+        result = supabase.table('orders').select("*").eq('id', order_id).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        return result.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching order: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch order: {str(e)}")
+
+
+@api_router.get("/orders")
+async def get_all_orders():
+    """Get all orders from Supabase"""
+    try:
+        result = supabase.table('orders').select("*").order('created_at', desc=True).execute()
+        return result.data
+    except Exception as e:
+        logger.error(f"Error fetching orders: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch orders: {str(e)}")
+
+
+@api_router.patch("/orders/{order_id}/status")
+async def update_order_status(order_id: str, status: str):
+    """Update order status"""
+    try:
+        result = supabase.table('orders').update({
+            'order_status': status,
+            'updated_at': datetime.now(timezone.utc).isoformat()
+        }).eq('id', order_id).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        return {"success": True, "message": "Order status updated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating order status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update order status: {str(e)}")
+
 
 # Include the router in the main app
 app.include_router(api_router)
