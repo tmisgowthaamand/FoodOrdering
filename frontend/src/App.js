@@ -102,7 +102,7 @@ function App() {
   // Render checkout page
   if (currentPage === 'checkout') {
     return (
-      <>
+      <AuthProvider>
         <Toaster position="top-right" richColors />
         <CheckoutPage 
           cart={cart} 
@@ -110,7 +110,7 @@ function App() {
           onOrderSuccess={handleOrderSuccess}
           onUpdateCart={handleAddToCart}
         />
-      </>
+      </AuthProvider>
     );
   }
 
