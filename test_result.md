@@ -101,3 +101,85 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Failed to create order while payment method - Order Now button should work properly"
+
+backend:
+  - task: "Create Order API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Fixed order creation - switched from Supabase to MongoDB as Supabase orders table didn't exist. Tested with curl and order created successfully."
+
+  - task: "Razorpay Create Order API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Tested with curl, Razorpay order creation works."
+
+  - task: "Get Order API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Updated to use MongoDB, needs testing."
+
+  - task: "Razorpay Payment Verification API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Updated to use MongoDB, needs testing."
+
+frontend:
+  - task: "Order Now Button Functionality"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/CheckoutPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Frontend code looks correct. Backend was fixed to use MongoDB. Needs user testing."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Create Order API"
+    - "Razorpay Create Order API"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Fixed order creation issue. The Supabase orders table didn't exist, so switched to MongoDB for order storage. All order-related endpoints now use MongoDB. Backend APIs tested with curl and working. Please test the checkout flow."
