@@ -207,14 +207,14 @@ async def create_order(order_data: CreateOrderRequest):
 
 @api_router.get("/orders/{order_id}")
 async def get_order(order_id: str):
-    """Get order by ID from Supabase"""
+    """Get order by ID from MongoDB"""
     try:
-        result = supabase.table('orders').select("*").eq('id', order_id).execute()
+        result = await db.orders.find_one({"id": order_id}, {"_id": 0})
         
-        if not result.data:
+        if not result:
             raise HTTPException(status_code=404, detail="Order not found")
         
-        return result.data[0]
+        return result
     except HTTPException:
         raise
     except Exception as e:
