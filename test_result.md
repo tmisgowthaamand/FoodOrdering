@@ -102,6 +102,112 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
+user_problem_statement: "Fix Order Now button functionality and integrate Supabase database for orders"
+
+backend:
+  - task: "Create Order API with Supabase"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented order creation API that stores orders in Supabase database"
+
+  - task: "Get Order API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented get order by ID from Supabase"
+
+  - task: "Get All Orders API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented get all orders from Supabase"
+
+  - task: "Update Order Status API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented update order status in Supabase"
+
+  - task: "Razorpay Payment Verification with Supabase"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Updated payment verification to update order status in Supabase"
+
+frontend:
+  - task: "Order Now Button Functionality"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/HeroBanner.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added onClick handler to Order Now button - scrolls to products section and shows toast"
+
+  - task: "App Integration with HeroBanner"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added ref for products section and handleOrderNowClick function passed to HeroBanner"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Create Order API with Supabase"
+    - "Order Now Button Functionality"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Implemented Order Now button functionality and Supabase integration for orders. Backend now stores orders in Supabase instead of MongoDB. Please test the Create Order API first by creating a COD order."
+
 user_problem_statement: "Failed to create order while payment method - Order Now button should work properly"
 
 backend:
