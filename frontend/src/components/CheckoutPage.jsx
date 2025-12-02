@@ -137,7 +137,9 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
       });
 
       if (!razorpayResponse.ok) {
-        throw new Error('Failed to create Razorpay order');
+        const errorData = await razorpayResponse.json();
+        console.error('Razorpay Order Creation Error:', errorData);
+        throw new Error(errorData.detail || 'Failed to create Razorpay order');
       }
 
       const razorpayOrder = await razorpayResponse.json();
