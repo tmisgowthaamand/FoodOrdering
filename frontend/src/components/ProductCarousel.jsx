@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import ProductCard from './ProductCard';
 
-const ProductCarousel = ({ title, products, onAddToCart, cart = {} }) => {
+const ProductCarousel = ({ title, products, onAddToCart, cart = {}, searchQuery = '' }) => {
   const scrollRef = useRef(null);
 
   const scroll = (direction) => {
@@ -46,6 +46,7 @@ const ProductCarousel = ({ title, products, onAddToCart, cart = {} }) => {
                 product={product}
                 onAddToCart={onAddToCart}
                 cartQuantity={cart[product.id] || 0}
+                searchQuery={searchQuery}
               />
             </div>
           ))}

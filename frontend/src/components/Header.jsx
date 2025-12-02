@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, User, ShoppingCart, ChevronDown, Menu, X, LogOut } from 'lucide-react';
+import { Search, MapPin, User, ShoppingCart, ChevronDown, Menu, X, LogOut, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -9,15 +9,104 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from './ui/dropdown-menu';
-import { cities, deliveryAreas } from '../data/mockData';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
+import { indianLocations, cityAreas } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
+import LocationSearch from './LocationSearch';
 
-const Header = ({ cartCount = 0, onCartClick, onLoginClick }) => {
-  const [selectedCity, setSelectedCity] = useState('Mumbai');
-  const [selectedArea, setSelectedArea] = useState('Andheri East');
-  const [searchQuery, setSearchQuery] = useState('');
+const Header = ({ cartCount = 0, onCartClick, onLoginClick, searchQuery = '', onSearchChange }) => {
+  const [selectedLocation, setSelectedLocation] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
+  const [showManualSelection, setShowManualSelection] = useState(false);
+
+  // Manual selection state
+  const [manualState, setManualState] = useState('Tamil Nadu');
+  const [manualCity, setManualCity] = useState('');
+  const [manualArea, setManualArea] = useState('');
+  const [areaSuggestions, setAreaSuggestions] = useState([]);
+  const [isAreaLoading, setIsAreaLoading] = useState(false);
+
+  const fetchAreaSuggestions = async (query) => {
+    if (!query || !manualCity) return;
+
+    setIsAreaLoading(true);
+    try {
+      // Search for the query within the selected city and state
+      const searchText = `${query}, ${manualCity}, ${manualState}`;
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchText)}&addressdetails=1&countrycodes=in&limit=10`
+      );
+      const data = await response.json();
+
+      // Extract meaningful area names
+      const suggestions = data.map(item => {
+        const addr = item.address;
+        return addr.suburb || addr.neighbourhood || addr.residential || addr.road || item.name.split(',')[0];
+      }).filter((val, index, self) => val && self.indexOf(val) === index); // Unique values
+
+      setAreaSuggestions(suggestions);
+    } catch (error) {
+      console.error("Error fetching areas:", error);
+    } finally {
+      setIsAreaLoading(false);
+    }
+  };
+
+  const detectAndFillManualLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsAreaLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
+          );
+          const data = await response.json();
+
+          if (data && data.address) {
+            const addr = data.address;
+            const state = addr.state;
+            const city = addr.city || addr.town || addr.village || addr.county;
+            const area = addr.suburb || addr.neighbourhood || addr.residential || addr.road;
+
+            if (state && indianLocations[state]) {
+              setManualState(state);
+
+              if (city) {
+                // Set city even if not in list
+                setManualCity(city);
+              }
+
+              if (area) {
+                setManualArea(area);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error reverse geocoding:", error);
+        } finally {
+          setIsAreaLoading(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        setIsAreaLoading(false);
+      }
+    );
+  };
+
   const { user, isAuthenticated, signOut, loading } = useAuth();
 
   // Get display name from user
@@ -37,6 +126,38 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick }) => {
   const handleSignOut = async () => {
     await signOut();
   };
+
+  const handleLocationSelect = (locationData) => {
+    setSelectedLocation({
+      area: locationData.area || locationData.city, // Fallback to city if area is missing
+      city: locationData.city,
+      state: locationData.state,
+      address: locationData.address
+    });
+    setLocationModalOpen(false);
+  };
+
+  const handleManualSubmit = () => {
+    if (!manualCity) return;
+
+    const area = manualArea.trim() || manualCity;
+    setSelectedLocation({
+      area: area,
+      city: manualCity,
+      state: manualState,
+      address: manualArea ? `${manualArea}, ${manualCity}, ${manualState}` : `${manualCity}, ${manualState}`
+    });
+    setLocationModalOpen(false);
+  };
+
+  const states = Object.keys(indianLocations).sort();
+  // dynamic cities list that includes the manual city if it's not in the predefined list
+  const cities = manualState
+    ? (indianLocations[manualState] || []).concat(
+      manualCity && !(indianLocations[manualState] || []).includes(manualCity) ? [manualCity] : []
+    ).sort()
+    : [];
+  const areas = manualCity && cityAreas[manualCity] ? cityAreas[manualCity].sort() : [];
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
@@ -60,37 +181,14 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick }) => {
           {/* Location Selector - Desktop */}
           <div className="hidden md:flex items-center gap-2 min-w-[200px]">
             <MapPin className="w-5 h-5 text-[#8B2FC9]" />
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-500">Deliver to</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium hover:text-[#8B2FC9] transition-colors">
-                  {selectedArea}, {selectedCity}
-                  <ChevronDown className="w-4 h-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 max-h-64 overflow-y-auto">
-                  <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">Select City</div>
-                  {cities.map((city) => (
-                    <DropdownMenuItem
-                      key={city}
-                      onClick={() => setSelectedCity(city)}
-                      className={city === selectedCity ? 'bg-purple-50 text-[#8B2FC9]' : ''}
-                    >
-                      {city}
-                    </DropdownMenuItem>
-                  ))}
-                  <div className="border-t my-1"></div>
-                  <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">Select Area</div>
-                  {deliveryAreas.map((area) => (
-                    <DropdownMenuItem
-                      key={area}
-                      onClick={() => setSelectedArea(area)}
-                      className={area === selectedArea ? 'bg-purple-50 text-[#8B2FC9]' : ''}
-                    >
-                      {area}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="flex flex-col cursor-pointer" onClick={() => setLocationModalOpen(true)}>
+              <span className="text-xs text-gray-500">Select Location</span>
+              <div className="flex items-center gap-1 text-sm font-medium hover:text-[#8B2FC9] transition-colors">
+                <span className="truncate max-w-[200px]">
+                  {selectedLocation ? `${selectedLocation.area}, ${selectedLocation.city}` : 'Select Location'}
+                </span>
+                <ChevronDown className="w-4 h-4" />
+              </div>
             </div>
           </div>
 
@@ -102,9 +200,17 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick }) => {
                 type="text"
                 placeholder="Search for atta, dal, coke and more"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2.5 w-full bg-gray-100 border-0 rounded-lg focus:bg-white focus:ring-2 focus:ring-[#8B2FC9] transition-all"
+                onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+                className="pl-10 pr-10 py-2.5 w-full bg-gray-100 border-0 rounded-lg focus:bg-white focus:ring-2 focus:ring-[#8B2FC9] transition-all"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => onSearchChange && onSearchChange('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -181,9 +287,17 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick }) => {
               type="text"
               placeholder="Search for atta, dal, coke and more"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2.5 w-full bg-gray-100 border-0 rounded-lg"
+              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+              className="pl-10 pr-10 py-2.5 w-full bg-gray-100 border-0 rounded-lg"
             />
+            {searchQuery && (
+              <button
+                onClick={() => onSearchChange && onSearchChange('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -191,11 +305,16 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick }) => {
         {mobileMenuOpen && (
           <div className="md:hidden mt-4 py-4 border-t space-y-4">
             {/* Location */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" onClick={() => {
+              setMobileMenuOpen(false);
+              setLocationModalOpen(true);
+            }}>
               <MapPin className="w-5 h-5 text-[#8B2FC9]" />
               <div>
                 <span className="text-xs text-gray-500">Deliver to</span>
-                <p className="text-sm font-medium">{selectedArea}, {selectedCity}</p>
+                <p className="text-sm font-medium">
+                  {selectedLocation ? `${selectedLocation.area}, ${selectedLocation.city}` : 'Select Location'}
+                </p>
               </div>
             </div>
             {/* Login/User */}
@@ -232,7 +351,170 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick }) => {
           </div>
         )}
       </div>
-    </header>
+
+      {/* Location Modal */}
+      <Dialog open={locationModalOpen} onOpenChange={setLocationModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Delivery Location</DialogTitle>
+            <DialogDescription>
+              Choose your delivery location to see available products and delivery times.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {!showManualSelection ? (
+              <>
+                <LocationSearch
+                  onLocationSelect={handleLocationSelect}
+                />
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={() => setShowManualSelection(true)}
+                    className="text-sm text-[#8B2FC9] hover:underline"
+                  >
+                    Can't find your location? Select manually
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div
+                  className="flex items-center gap-2 text-[#8B2FC9] cursor-pointer hover:bg-purple-50 p-2 rounded-md transition-colors border border-dashed border-[#8B2FC9] justify-center"
+                  onClick={detectAndFillManualLocation}
+                >
+                  <div className="w-5 h-5 flex items-center justify-center">
+                    {isAreaLoading ? (
+                      <div className="w-4 h-4 border-2 border-[#8B2FC9] border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <MapPin className="w-4 h-4" />
+                    )}
+                  </div>
+                  <span className="font-medium text-sm">Use Current Location</span>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">State</label>
+                  <select
+                    className="w-full p-2 border rounded-md bg-white"
+                    value={manualState}
+                    onChange={(e) => {
+                      setManualState(e.target.value);
+                      setManualCity('');
+                      setManualArea('');
+                    }}
+                  >
+                    {states.map(state => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">City</label>
+                  <select
+                    className="w-full p-2 border rounded-md bg-white"
+                    value={manualCity}
+                    onChange={(e) => {
+                      setManualCity(e.target.value);
+                      setManualArea('');
+                    }}
+                  >
+                    <option value="">Select City</option>
+                    {cities.map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2 relative">
+                  <label className="text-sm font-medium text-gray-700">Area / Locality</label>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      placeholder={cityAreas[manualCity] ? "Select or search area" : "Type to search area"}
+                      value={manualArea}
+                      onChange={(e) => {
+                        setManualArea(e.target.value);
+                        const query = e.target.value.toLowerCase();
+
+                        // If we have hardcoded areas, filter them
+                        if (cityAreas[manualCity]) {
+                          const filtered = cityAreas[manualCity].filter(area =>
+                            area.toLowerCase().includes(query)
+                          );
+                          setAreaSuggestions(filtered);
+
+                          // If no local matches and query is long enough, try online search
+                          if (filtered.length === 0 && query.length > 2) {
+                            fetchAreaSuggestions(e.target.value);
+                          }
+                        } else {
+                          // No hardcoded areas, just search online
+                          if (query.length > 2) {
+                            fetchAreaSuggestions(e.target.value);
+                          } else {
+                            setAreaSuggestions([]);
+                          }
+                        }
+                      }}
+                      onFocus={() => {
+                        // On focus, show hardcoded list if available and input is empty
+                        if (cityAreas[manualCity] && !manualArea) {
+                          setAreaSuggestions(cityAreas[manualCity]);
+                        }
+                      }}
+                      disabled={!manualCity}
+                      className="w-full pr-10"
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                      {isAreaLoading ? (
+                        <div className="w-4 h-4 border-2 border-[#8B2FC9] border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      )}
+                    </div>
+                  </div>
+
+                  {areaSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {areaSuggestions.map((area, index) => (
+                        <div
+                          key={index}
+                          className="p-2 hover:bg-purple-50 cursor-pointer text-sm truncate"
+                          onClick={() => {
+                            setManualArea(area);
+                            setAreaSuggestions([]);
+                          }}
+                        >
+                          {area}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  className="w-full bg-[#8B2FC9] hover:bg-[#7a26b3] text-white mt-2"
+                  onClick={handleManualSubmit}
+                  disabled={!manualCity || !manualArea}
+                >
+                  Confirm Location
+                </Button>
+
+                <div className="mt-2 text-center">
+                  <button
+                    onClick={() => setShowManualSelection(false)}
+                    className="text-sm text-[#8B2FC9] hover:underline"
+                  >
+                    Back to Search
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent >
+      </Dialog >
+    </header >
   );
 };
 

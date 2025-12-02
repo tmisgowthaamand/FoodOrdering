@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
     try {
       // Format phone number with country code if not present
       const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
-      
+
       const { data, error } = await supabase.auth.signInWithOtp({
         phone: formattedPhone,
       });
@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
     setError(null);
     try {
       const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
-      
+
       const { data, error } = await supabase.auth.verifyOtp({
         phone: formattedPhone,
         token: otp,
@@ -104,6 +104,48 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const signUpWithEmail = async (email, password, name) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+          },
+          emailRedirectTo: window.location.origin,
+        }
+      });
+      if (error) throw error;
+      return { data, error: null };
+    } catch (err) {
+      setError(err.message);
+      return { data: null, error: err };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInWithEmail = async (email, password) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      return { data, error: null };
+    } catch (err) {
+      setError(err.message);
+      return { data: null, error: err };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value = {
     session,
     user,
@@ -113,6 +155,8 @@ export function AuthProvider({ children }) {
     signInWithPhone,
     verifyOtp,
     signOut,
+    signUpWithEmail,
+    signInWithEmail,
     isAuthenticated: !!user,
   };
 

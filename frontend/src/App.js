@@ -12,19 +12,26 @@ import Footer from './components/Footer';
 import CartSidebar from './components/CartSidebar';
 import LoginModal from './components/LoginModal';
 import CheckoutPage from './components/CheckoutPage';
-import { products } from './data/mockData';
+import SearchResults from './components/SearchResults';
+import { products, categories } from './data/mockData';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
 import { AuthProvider } from './context/AuthContext';
 
 function App() {
+  React.useEffect(() => {
+    document.title = "Foodeo Grocery Online Shopping";
+  }, []);
+
   const [cart, setCart] = useState({});
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('home'); // 'home' or 'checkout'
-  
-  // Ref for products section
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Refs for products sections
   const productsSectionRef = useRef(null);
+  const categoryRefs = useRef({});
 
   // Calculate cart count
   const cartCount = useMemo(() => {
@@ -37,7 +44,7 @@ function App() {
       ...prev,
       [product.id]: quantity,
     }));
-    
+
     if (quantity > 0) {
       toast.success(`${product.name} added to cart`, {
         description: `Quantity: ${quantity}`,
@@ -74,29 +81,38 @@ function App() {
   };
 
   // Filter products by category
-  const fruitsAndVegetables = products.filter(
-    (p) => p.category === 'Fruits & Vegetables'
-  );
-  const dairyProducts = products.filter(
-    (p) => p.category === 'Dairy & Breakfast'
-  );
-  const munchies = products.filter((p) => p.category === 'Munchies');
-  const coldDrinks = products.filter(
-    (p) => p.category === 'Cold Drinks & Juices'
-  );
-  const teaCoffee = products.filter(
-    (p) => p.category === 'Tea, Coffee & Health Drinks'
-  );
-  const personalCare = products.filter((p) => p.category === 'Personal Care');
-  const cleaningEssentials = products.filter(
-    (p) => p.category === 'Cleaning Essentials'
-  );
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return products;
+    }
 
-  // Handle category click
+    const query = searchQuery.toLowerCase();
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(query) ||
+        p.category.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+
+  // Handle category click - scroll to relevant section
   const handleCategoryClick = (category) => {
-    toast.info(`Browsing ${category.name}`, {
-      description: `${category.itemCount} items available`,
-    });
+    const targetRef = categoryRefs.current[category.name];
+
+    if (targetRef) {
+      targetRef.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toast.success(`Showing ${category.name}`, {
+        description: `${category.itemCount} items available`,
+        duration: 2000,
+      });
+    } else {
+      // Fallback - scroll to products section
+      if (productsSectionRef.current) {
+        productsSectionRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+      toast.info(`Browsing ${category.name}`, {
+        description: `${category.itemCount} items available`,
+      });
+    }
   };
 
   // Render checkout page
@@ -104,8 +120,8 @@ function App() {
     return (
       <AuthProvider>
         <Toaster position="top-right" richColors />
-        <CheckoutPage 
-          cart={cart} 
+        <CheckoutPage
+          cart={cart}
           onBack={handleBackToHome}
           onOrderSuccess={handleOrderSuccess}
           onUpdateCart={handleAddToCart}
@@ -117,90 +133,63 @@ function App() {
   return (
     <div className="min-h-screen bg-white">
       <Toaster position="top-right" richColors />
-      
+
       {/* Header */}
       <Header
         cartCount={cartCount}
         onCartClick={() => setIsCartOpen(true)}
         onLoginClick={() => setIsLoginOpen(true)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
 
-      {/* Hero Banner */}
-      <HeroBanner onOrderNowClick={handleOrderNowClick} />
-
-      {/* Category Grid */}
-      <CategoryGrid onCategoryClick={handleCategoryClick} />
-
-      {/* Today's Deals */}
-      <PromoBanner />
-
-      {/* Products Section - with ref for scrolling */}
-      <div ref={productsSectionRef} id="products-section">
-        {/* Fruits & Vegetables Carousel */}
-        <ProductCarousel
-          title="Fruits & Vegetables"
-          products={fruitsAndVegetables}
+      {searchQuery ? (
+        <SearchResults
+          products={filteredProducts}
           onAddToCart={handleAddToCart}
           cart={cart}
+          searchQuery={searchQuery}
         />
+      ) : (
+        <>
+          {/* Hero Banner */}
+          <HeroBanner onOrderNowClick={handleOrderNowClick} />
 
-        {/* Dairy & Breakfast Carousel */}
-        <ProductCarousel
-          title="Dairy & Breakfast"
-          products={dairyProducts}
-          onAddToCart={handleAddToCart}
-          cart={cart}
-        />
-      </div>
+          {/* Category Grid */}
+          <CategoryGrid onCategoryClick={handleCategoryClick} />
 
-      {/* Features Section */}
-      <FeaturesSection />
+          {/* Today's Deals */}
+          <PromoBanner />
 
-      {/* Munchies Carousel */}
-      <ProductCarousel
-        title="Munchies"
-        products={munchies}
-        onAddToCart={handleAddToCart}
-        cart={cart}
-      />
+          {/* Products Section - with ref for scrolling */}
+          <div ref={productsSectionRef} id="products-section">
+            {categories.map((category, index) => {
+              const categoryProducts = filteredProducts.filter(
+                (p) => p.category === category.name
+              );
 
-      {/* Cold Drinks Carousel */}
-      <ProductCarousel
-        title="Cold Drinks & Juices"
-        products={coldDrinks}
-        onAddToCart={handleAddToCart}
-        cart={cart}
-      />
+              if (categoryProducts.length === 0) return null;
 
-      {/* Delivery Banner */}
-      <DeliveryBanner />
+              return (
+                <div key={category.id} ref={el => categoryRefs.current[category.name] = el}>
+                  <ProductCarousel
+                    title={category.name}
+                    products={categoryProducts}
+                    onAddToCart={handleAddToCart}
+                    cart={cart}
+                    searchQuery={searchQuery}
+                  />
+                  {index === 1 && <FeaturesSection />}
+                  {index === 4 && <DeliveryBanner />}
+                </div>
+              );
+            })}
+          </div>
 
-      {/* Tea & Coffee Carousel */}
-      <ProductCarousel
-        title="Tea, Coffee & Health Drinks"
-        products={teaCoffee}
-        onAddToCart={handleAddToCart}
-        cart={cart}
-      />
-
-      {/* Personal Care Carousel */}
-      <ProductCarousel
-        title="Personal Care"
-        products={personalCare}
-        onAddToCart={handleAddToCart}
-        cart={cart}
-      />
-
-      {/* Cleaning Essentials Carousel */}
-      <ProductCarousel
-        title="Cleaning Essentials"
-        products={cleaningEssentials}
-        onAddToCart={handleAddToCart}
-        cart={cart}
-      />
-
-      {/* App Download Section */}
-      <AppDownloadSection />
+          {/* App Download Section */}
+          <AppDownloadSection />
+        </>
+      )}
 
       {/* Footer */}
       <Footer />

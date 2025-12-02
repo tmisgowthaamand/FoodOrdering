@@ -28,3 +28,4 @@ razorpay>=1.4.1
 supabase>=2.0.0
 razorpay
 supabase
+kagglehub[pandas-datasets]>=0.2.0

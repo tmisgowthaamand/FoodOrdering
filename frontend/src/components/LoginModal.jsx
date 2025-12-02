@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Phone, Mail, User, Loader2 } from 'lucide-react';
+import { Phone, Mail, User, Loader2, Lock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -34,16 +34,19 @@ const GoogleIcon = () => (
 );
 
 const LoginModal = ({ isOpen, onClose }) => {
-  const [mode, setMode] = useState('login'); // login, signup, otp
+  const [mode, setMode] = useState('login'); // login, signup, otp, email-login, email-signup
+  const [authMethod, setAuthMethod] = useState('phone'); // 'phone' or 'email'
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const otpRefs = useRef([]);
 
-  const { signInWithGoogle, signInWithPhone, verifyOtp } = useAuth();
+  const { signInWithGoogle, signInWithPhone, verifyOtp, signUpWithEmail, signInWithEmail } = useAuth();
 
   // Handle Google Sign In
   const handleGoogleSignIn = async () => {
@@ -54,9 +57,11 @@ const LoginModal = ({ isOpen, onClose }) => {
       if (error) {
         setError(error.message);
         toast.error('Google sign-in failed', { description: error.message });
+      } else {
+        toast.success('Signed in with Google!');
+        onClose();
+        resetForm();
       }
-      // Note: User will be redirected to Google for authentication
-      // The modal will close automatically when auth state changes
     } catch (err) {
       setError(err.message || 'Failed to sign in with Google');
       toast.error('Sign-in failed');
@@ -65,10 +70,72 @@ const LoginModal = ({ isOpen, onClose }) => {
     }
   };
 
+  // Handle Email/Password Login
+  const handleEmailLogin = async () => {
+    if (!email || !password) return;
+
+    setIsLoading(true);
+    setError('');
+    try {
+      const { error } = await signInWithEmail(email, password);
+      if (error) {
+        setError(error.message);
+        toast.error('Login failed', { description: error.message });
+      } else {
+        toast.success('Login successful!');
+        onClose();
+        resetForm();
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to login');
+      toast.error('Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle Email/Password Signup
+  const handleEmailSignup = async () => {
+    if (!name || !email || !password || !confirmPassword) return;
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    try {
+      const { error } = await signUpWithEmail(email, password, name);
+      if (error) {
+        setError(error.message);
+        toast.error('Signup failed', { description: error.message });
+      } else {
+        toast.success('Account created!', {
+          description: 'Please check your email to verify your account'
+        });
+        onClose();
+        resetForm();
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to create account');
+      toast.error('Signup failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Handle Send OTP
   const handleSendOtp = async () => {
     if (phone.length !== 10) return;
-    
+
     setIsLoading(true);
     setError('');
     try {
@@ -93,7 +160,7 @@ const LoginModal = ({ isOpen, onClose }) => {
     if (value.length > 1) {
       value = value.slice(-1);
     }
-    
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
@@ -115,7 +182,7 @@ const LoginModal = ({ isOpen, onClose }) => {
   const handleVerifyOtp = async () => {
     const otpString = otp.join('');
     if (otpString.length !== 6) return;
-    
+
     setIsLoading(true);
     setError('');
     try {
@@ -136,10 +203,10 @@ const LoginModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // Handle Signup (for phone-based signup)
-  const handleSignup = async () => {
+  // Handle Phone Signup
+  const handlePhoneSignup = async () => {
     if (!name || !email || phone.length !== 10) return;
-    
+
     setIsLoading(true);
     setError('');
     try {
@@ -186,7 +253,10 @@ const LoginModal = ({ isOpen, onClose }) => {
     setOtp(['', '', '', '', '', '']);
     setName('');
     setEmail('');
+    setPassword('');
+    setConfirmPassword('');
     setMode('login');
+    setAuthMethod('phone');
     setError('');
   };
 
@@ -246,35 +316,102 @@ const LoginModal = ({ isOpen, onClose }) => {
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">or login with phone</span>
+                  <span className="px-2 bg-white text-gray-500">or continue with</span>
                 </div>
               </div>
 
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="tel"
-                  placeholder="Enter mobile number"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  className="pl-10 py-3"
-                  maxLength={10}
-                />
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
-                  +91
-                </span>
+              {/* Auth Method Tabs */}
+              <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                <button
+                  onClick={() => setAuthMethod('email')}
+                  className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all ${authMethod === 'email'
+                      ? 'bg-white text-[#8B2FC9] shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  <Mail className="w-4 h-4 inline mr-2" />
+                  Email
+                </button>
+                <button
+                  onClick={() => setAuthMethod('phone')}
+                  className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all ${authMethod === 'phone'
+                      ? 'bg-white text-[#8B2FC9] shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  <Phone className="w-4 h-4 inline mr-2" />
+                  Phone
+                </button>
               </div>
 
-              <Button
-                onClick={handleSendOtp}
-                disabled={phone.length !== 10 || isLoading}
-                className="w-full bg-[#8B2FC9] hover:bg-[#7a26b3] text-white py-3 rounded-lg font-semibold"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                ) : null}
-                {isLoading ? 'Sending...' : 'Send OTP'}
-              </Button>
+              {/* Email Login Form */}
+              {authMethod === 'email' && (
+                <>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 py-3"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 py-3"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleEmailLogin}
+                    disabled={!email || !password || isLoading}
+                    className="w-full bg-[#8B2FC9] hover:bg-[#7a26b3] text-white py-3 rounded-lg font-semibold"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    ) : null}
+                    {isLoading ? 'Logging in...' : 'Login'}
+                  </Button>
+                </>
+              )}
+
+              {/* Phone Login Form */}
+              {authMethod === 'phone' && (
+                <>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="tel"
+                      placeholder="Enter mobile number"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      className="pl-10 py-3"
+                      maxLength={10}
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
+                      +91
+                    </span>
+                  </div>
+
+                  <Button
+                    onClick={handleSendOtp}
+                    disabled={phone.length !== 10 || isLoading}
+                    className="w-full bg-[#8B2FC9] hover:bg-[#7a26b3] text-white py-3 rounded-lg font-semibold"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    ) : null}
+                    {isLoading ? 'Sending...' : 'Send OTP'}
+                  </Button>
+                </>
+              )}
 
               <p className="text-center text-sm text-gray-600">
                 {"Don't have an account?"}{' '}
@@ -311,57 +448,146 @@ const LoginModal = ({ isOpen, onClose }) => {
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">or sign up with phone</span>
+                  <span className="px-2 bg-white text-gray-500">or sign up with</span>
                 </div>
               </div>
 
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="Full Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-10 py-3"
-                />
+              {/* Auth Method Tabs */}
+              <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                <button
+                  onClick={() => setAuthMethod('email')}
+                  className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all ${authMethod === 'email'
+                      ? 'bg-white text-[#8B2FC9] shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  <Mail className="w-4 h-4 inline mr-2" />
+                  Email
+                </button>
+                <button
+                  onClick={() => setAuthMethod('phone')}
+                  className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all ${authMethod === 'phone'
+                      ? 'bg-white text-[#8B2FC9] shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  <Phone className="w-4 h-4 inline mr-2" />
+                  Phone
+                </button>
               </div>
 
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="email"
-                  placeholder="Email Address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 py-3"
-                />
-              </div>
+              {/* Email Signup Form */}
+              {authMethod === 'email' && (
+                <>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="text"
+                      placeholder="Full Name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="pl-10 py-3"
+                    />
+                  </div>
 
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="tel"
-                  placeholder="Mobile Number"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  className="pl-10 py-3"
-                  maxLength={10}
-                />
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
-                  +91
-                </span>
-              </div>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="email"
+                      placeholder="Email Address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 py-3"
+                    />
+                  </div>
 
-              <Button
-                onClick={handleSignup}
-                disabled={!name || !email || phone.length !== 10 || isLoading}
-                className="w-full bg-[#8B2FC9] hover:bg-[#7a26b3] text-white py-3 rounded-lg font-semibold"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                ) : null}
-                {isLoading ? 'Creating Account...' : 'Create Account'}
-              </Button>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="password"
+                      placeholder="Create Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 py-3"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="password"
+                      placeholder="Confirm Password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="pl-10 py-3"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleEmailSignup}
+                    disabled={!name || !email || !password || !confirmPassword || isLoading}
+                    className="w-full bg-[#8B2FC9] hover:bg-[#7a26b3] text-white py-3 rounded-lg font-semibold"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    ) : null}
+                    {isLoading ? 'Creating Account...' : 'Create Account'}
+                  </Button>
+                </>
+              )}
+
+              {/* Phone Signup Form */}
+              {authMethod === 'phone' && (
+                <>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="text"
+                      placeholder="Full Name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="pl-10 py-3"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="email"
+                      placeholder="Email Address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 py-3"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="tel"
+                      placeholder="Mobile Number"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      className="pl-10 py-3"
+                      maxLength={10}
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
+                      +91
+                    </span>
+                  </div>
+
+                  <Button
+                    onClick={handlePhoneSignup}
+                    disabled={!name || !email || phone.length !== 10 || isLoading}
+                    className="w-full bg-[#8B2FC9] hover:bg-[#7a26b3] text-white py-3 rounded-lg font-semibold"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    ) : null}
+                    {isLoading ? 'Creating Account...' : 'Create Account'}
+                  </Button>
+                </>
+              )}
 
               <p className="text-center text-sm text-gray-600">
                 Already have an account?{' '}
@@ -407,7 +633,7 @@ const LoginModal = ({ isOpen, onClose }) => {
 
               <p className="text-center text-sm text-gray-600">
                 {"Didn't receive OTP?"}{' '}
-                <button 
+                <button
                   onClick={handleResendOtp}
                   disabled={isLoading}
                   className="text-[#8B2FC9] font-semibold hover:underline"

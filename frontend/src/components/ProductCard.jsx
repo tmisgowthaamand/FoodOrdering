@@ -2,7 +2,25 @@ import React, { useState } from 'react';
 import { Plus, Minus } from 'lucide-react';
 import { Button } from './ui/button';
 
-const ProductCard = ({ product, onAddToCart, cartQuantity = 0 }) => {
+const HighlightText = ({ text, highlight }) => {
+  if (!highlight || !highlight.trim()) {
+    return <span>{text}</span>;
+  }
+  const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+  return (
+    <span>
+      {parts.map((part, i) =>
+        part.toLowerCase() === highlight.toLowerCase() ? (
+          <span key={i} className="bg-yellow-200 text-black font-bold rounded-sm px-0.5">{part}</span>
+        ) : (
+          part
+        )
+      )}
+    </span>
+  );
+};
+
+const ProductCard = ({ product, onAddToCart, cartQuantity = 0, searchQuery = '' }) => {
   const [quantity, setQuantity] = useState(cartQuantity);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -53,7 +71,7 @@ const ProductCard = ({ product, onAddToCart, cartQuantity = 0 }) => {
 
         {/* Product Name */}
         <h3 className="font-medium text-gray-900 text-sm line-clamp-2 min-h-[40px] mb-1">
-          {product.name}
+          <HighlightText text={product.name} highlight={searchQuery} />
         </h3>
 
         {/* Weight */}
