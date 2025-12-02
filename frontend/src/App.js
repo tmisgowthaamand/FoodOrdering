@@ -13,6 +13,7 @@ import CartSidebar from './components/CartSidebar';
 import LoginModal from './components/LoginModal';
 import CheckoutPage from './components/CheckoutPage';
 import SearchResults from './components/SearchResults';
+import Loader from './components/Loader';
 import { products, categories } from './data/mockData';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
@@ -21,6 +22,16 @@ import { AuthProvider } from './context/AuthContext';
 function App() {
   React.useEffect(() => {
     document.title = "Foodeo Grocery Online Shopping";
+  }, []);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    // Simulate initial loading
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
   }, []);
 
   const [cart, setCart] = useState({});
@@ -133,6 +144,8 @@ function App() {
   return (
     <div className="min-h-screen bg-white">
       <Toaster position="top-right" richColors />
+
+      {isLoading && <Loader />}
 
       {/* Header */}
       <Header
