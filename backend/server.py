@@ -29,10 +29,19 @@ logger = logging.getLogger(__name__)
 # client = AsyncIOMotorClient(mongo_url)
 # db = client[os.environ['DB_NAME']]
 
-# Razorpay client
+# Razorpay client with retry logic
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+session = requests.Session()
+retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
+session.mount('https://', HTTPAdapter(max_retries=retries))
+
 razorpay_client = razorpay.Client(
     auth=(os.environ.get('RAZORPAY_KEY_ID'), os.environ.get('RAZORPAY_KEY_SECRET'))
 )
+razorpay_client.set_session(session)
 
 # Supabase client
 supabase_url = os.environ.get('SUPABASE_URL')
