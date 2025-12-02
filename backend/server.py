@@ -41,7 +41,7 @@ session.mount('https://', HTTPAdapter(max_retries=retries))
 razorpay_client = razorpay.Client(
     auth=(os.environ.get('RAZORPAY_KEY_ID'), os.environ.get('RAZORPAY_KEY_SECRET'))
 )
-razorpay_client.set_session(session)
+# razorpay_client.set_session(session) # Method does not exist, removing to fix crash
 
 # Supabase client
 supabase_url = os.environ.get('SUPABASE_URL')

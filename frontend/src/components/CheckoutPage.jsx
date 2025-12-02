@@ -82,7 +82,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
   };
 
   const createOrder = async () => {
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+    const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
     const orderData = {
       items: cartItems.map(item => ({
@@ -113,7 +113,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
 
   const handleRazorpayPayment = async () => {
     setIsLoading(true);
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+    const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
     try {
       // Load Razorpay script

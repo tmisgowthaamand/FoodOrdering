@@ -15,4 +15,4 @@ services:
       - key: SUPABASE_KEY
         value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zeXRramF2YXBpZ2lqeHFyZWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMTcyODUsImV4cCI6MjA3OTc5MzI4NX0.a0RkoCttEO5TFVuND6VhkdYzHeP835sGcY-dALXKpbM
       - key: CORS_ORIGINS
-        value: https://foodeo-liard.vercel.app,http://localhost:3000
+        value: https://foodeo-liard.vercel.app
