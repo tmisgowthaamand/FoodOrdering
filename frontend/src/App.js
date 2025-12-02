@@ -11,9 +11,17 @@ import AppDownloadSection from './components/AppDownloadSection';
 import Footer from './components/Footer';
 import CartSidebar from './components/CartSidebar';
 import LoginModal from './components/LoginModal';
-import CheckoutPage from './components/CheckoutPage';
-import SearchResults from './components/SearchResults';
 import Loader from './components/Loader';
+import LazyLoadSection from './components/LazyLoadSection';
+import WhatsAppButton from './components/WhatsAppButton';
+
+// Lazy load components for performance
+const CheckoutPage = React.lazy(() => import('./components/CheckoutPage'));
+const SearchResults = React.lazy(() => import('./components/SearchResults'));
+const PrivacyPolicy = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.PrivacyPolicy })));
+const TermsConditions = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.TermsConditions })));
+const ShippingPolicy = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.ShippingPolicy })));
+const RefundPolicy = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.RefundPolicy })));
 import { products, categories } from './data/mockData';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
@@ -39,6 +47,11 @@ function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('home'); // 'home' or 'checkout'
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Scroll to top on page change
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentPage]);
 
   // Refs for products sections
   const productsSectionRef = useRef(null);
@@ -131,15 +144,22 @@ function App() {
     return (
       <AuthProvider>
         <Toaster position="top-right" richColors />
-        <CheckoutPage
-          cart={cart}
-          onBack={handleBackToHome}
-          onOrderSuccess={handleOrderSuccess}
-          onUpdateCart={handleAddToCart}
-        />
+        <React.Suspense fallback={<Loader />}>
+          <CheckoutPage
+            cart={cart}
+            onBack={handleBackToHome}
+            onOrderSuccess={handleOrderSuccess}
+            onUpdateCart={handleAddToCart}
+          />
+        </React.Suspense>
       </AuthProvider>
     );
   }
+
+  if (currentPage === 'privacy') return <React.Suspense fallback={<Loader />}><PrivacyPolicy onBack={handleBackToHome} /></React.Suspense>;
+  if (currentPage === 'terms') return <React.Suspense fallback={<Loader />}><TermsConditions onBack={handleBackToHome} /></React.Suspense>;
+  if (currentPage === 'shipping') return <React.Suspense fallback={<Loader />}><ShippingPolicy onBack={handleBackToHome} /></React.Suspense>;
+  if (currentPage === 'refund') return <React.Suspense fallback={<Loader />}><RefundPolicy onBack={handleBackToHome} /></React.Suspense>;
 
   return (
     <div className="min-h-screen bg-white">
@@ -157,12 +177,14 @@ function App() {
       />
 
       {searchQuery ? (
-        <SearchResults
-          products={filteredProducts}
-          onAddToCart={handleAddToCart}
-          cart={cart}
-          searchQuery={searchQuery}
-        />
+        <React.Suspense fallback={<Loader />}>
+          <SearchResults
+            products={filteredProducts}
+            onAddToCart={handleAddToCart}
+            cart={cart}
+            searchQuery={searchQuery}
+          />
+        </React.Suspense>
       ) : (
         <>
           {/* Hero Banner */}
@@ -184,17 +206,19 @@ function App() {
               if (categoryProducts.length === 0) return null;
 
               return (
-                <div key={category.id} ref={el => categoryRefs.current[category.name] = el}>
-                  <ProductCarousel
-                    title={category.name}
-                    products={categoryProducts}
-                    onAddToCart={handleAddToCart}
-                    cart={cart}
-                    searchQuery={searchQuery}
-                  />
-                  {index === 1 && <FeaturesSection />}
-                  {index === 4 && <DeliveryBanner />}
-                </div>
+                <LazyLoadSection key={category.id}>
+                  <div ref={el => categoryRefs.current[category.name] = el}>
+                    <ProductCarousel
+                      title={category.name}
+                      products={categoryProducts}
+                      onAddToCart={handleAddToCart}
+                      cart={cart}
+                      searchQuery={searchQuery}
+                    />
+                    {index === 1 && <FeaturesSection />}
+                    {index === 4 && <DeliveryBanner />}
+                  </div>
+                </LazyLoadSection>
               );
             })}
           </div>
@@ -205,7 +229,7 @@ function App() {
       )}
 
       {/* Footer */}
-      <Footer />
+      <Footer onNavigate={setCurrentPage} />
 
       {/* Cart Sidebar */}
       <CartSidebar
@@ -218,6 +242,9 @@ function App() {
 
       {/* Login Modal */}
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
+      {/* WhatsApp Floating Button */}
+      <WhatsAppButton />
     </div>
   );
 }

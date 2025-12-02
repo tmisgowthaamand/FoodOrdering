@@ -3,6 +3,8 @@ import { generateProducts } from './productGenerator';
 import { kaggleProducts } from './kaggle_products';
 import { dummyJsonProducts } from './dummyJsonProducts';
 import { openFoodFactsProducts } from './openFoodFactsProducts';
+import { fruitVegProducts } from './fruitVegData';
+import { teaCoffeeProducts } from './teaCoffeeData';
 
 export const categories = [
     { id: 1, name: "Fruits & Vegetables", image: "https://images.unsplash.com/photo-1579113800032-c38bd7635818?w=200&h=200&fit=crop", itemCount: 234 },
@@ -28,11 +30,7 @@ export const categories = [
 ];
 
 const staticProducts = [
-    // Fruits & Vegetables
-    { id: 1, name: "Fresh Green Beans", weight: "250 g", price: 16, originalPrice: 27, image: "https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop", category: "Fruits & Vegetables", discount: 40 },
-    { id: 2, name: "Fresh Tomatoes", weight: "500 g", price: 55, originalPrice: 63, image: "https://images.pexels.com/photos/1327838/pexels-photo-1327838.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop", category: "Fruits & Vegetables", discount: 12 },
-    { id: 3, name: "Lady Finger (Okra)", weight: "500 g", price: 32, originalPrice: 56, image: "https://images.pexels.com/photos/6157049/pexels-photo-6157049.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop", category: "Fruits & Vegetables", discount: 42 },
-    { id: 1001, name: "Nano Banana", weight: "1 kg", price: 45, originalPrice: 60, image: "https://images.pexels.com/photos/1132047/pexels-photo-1132047.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop", category: "Fruits & Vegetables", discount: 25 },
+    // Fruits & Vegetables - Replaced by fruitVegData.js
 
     // Dairy & Breakfast
     { id: 4, name: "Cadbury Dairy Milk Minis", weight: "1 pack (20 x 7 g)", price: 128, originalPrice: 178, image: "https://images.pexels.com/photos/65882/chocolate-dark-coffee-confiserie-65882.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop", category: "Dairy & Breakfast", discount: 28 },
@@ -54,10 +52,7 @@ const staticProducts = [
     { id: 14, name: "McCain Chilli Cheesy Nuggets", weight: "250 g", price: 135, originalPrice: 159, image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop", category: "Instant & Frozen Food", discount: 15 },
     { id: 15, name: "Godrej Yummiez Veg Sticks", weight: "270 g", price: 94, originalPrice: 112, image: "https://images.pexels.com/photos/1893556/pexels-photo-1893556.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop", category: "Instant & Frozen Food", discount: 16 },
 
-    // Tea, Coffee & Health Drinks
-    { id: 16, name: "Girnar Pure & Fresh Tea", weight: "250 g", price: 147, originalPrice: 155, image: "https://images.pexels.com/photos/1638280/pexels-photo-1638280.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop", category: "Tea, Coffee & Health Drinks", discount: 5 },
-    { id: 17, name: "Tata Tea Premium", weight: "1 kg", price: 449, originalPrice: 620, image: "https://images.pexels.com/photos/1793035/pexels-photo-1793035.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop", category: "Tea, Coffee & Health Drinks", discount: 27 },
-    { id: 18, name: "Society Leaf Tea", weight: "1 kg", price: 533, originalPrice: 620, image: "https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop", category: "Tea, Coffee & Health Drinks", discount: 14 },
+    // Tea, Coffee & Health Drinks - Replaced by teaCoffeeData.js
 
     // Bakery & Biscuits
     { id: 19, name: "Britannia Milk Slice Bread", weight: "400 g", price: 52, originalPrice: 55, image: "https://images.pexels.com/photos/1775043/pexels-photo-1775043.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop", category: "Bakery & Biscuits", discount: 5 },
@@ -149,7 +144,7 @@ const staticProducts = [
     { id: 79, name: "Milky Mist Alphonso Mango Cup", weight: "100 ml", price: 36, originalPrice: 40, image: "https://www.bbassets.com/media/uploads/p/m/40324548_1-milky-mist-alphonso-mango-delight-ice-cream-cups.jpg?tr=w-154,q-80", category: "Sweet Tooth", discount: 10 }
 ];
 
-export const products = [...staticProducts, ...generateProducts(4000), ...kaggleProducts, ...dummyJsonProducts, ...openFoodFactsProducts];
+export const products = [...staticProducts, ...fruitVegProducts, ...teaCoffeeProducts, ...generateProducts(4000), ...kaggleProducts, ...dummyJsonProducts, ...openFoodFactsProducts];
 
 
 export const banners = [

@@ -25,7 +25,7 @@
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
   }
- 
+
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -48,14 +48,30 @@
     --ring: 212.7 26.8% 83.9%;
   }
 }
- 
+
 @layer base {
   * {
     @apply border-border;
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll jank */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+}
+
+/* Performance Optimizations */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 500px;
+  /* Estimate height to prevent scrollbar jumping */
 }
 
 /* Fix for Google Maps Autocomplete dropdown z-index */
@@ -108,16 +124,38 @@
   box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
 }
 
-.front  { transform: rotateY(0deg) translateZ(30px); }
-.back   { transform: rotateY(180deg) translateZ(30px); }
-.right  { transform: rotateY(90deg) translateZ(30px); }
-.left   { transform: rotateY(-90deg) translateZ(30px); }
-.top    { transform: rotateX(90deg) translateZ(30px); }
-.bottom { transform: rotateX(-90deg) translateZ(30px); }
+.front {
+  transform: rotateY(0deg) translateZ(30px);
+}
+
+.back {
+  transform: rotateY(180deg) translateZ(30px);
+}
+
+.right {
+  transform: rotateY(90deg) translateZ(30px);
+}
+
+.left {
+  transform: rotateY(-90deg) translateZ(30px);
+}
+
+.top {
+  transform: rotateX(90deg) translateZ(30px);
+}
+
+.bottom {
+  transform: rotateX(-90deg) translateZ(30px);
+}
 
 @keyframes rotate {
-  0% { transform: rotateX(0deg) rotateY(0deg); }
-  100% { transform: rotateX(360deg) rotateY(360deg); }
+  0% {
+    transform: rotateX(0deg) rotateY(0deg);
+  }
+
+  100% {
+    transform: rotateX(360deg) rotateY(360deg);
+  }
 }
 
 .loading-text {
@@ -125,6 +163,32 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
+/* Hardware Acceleration for smoother animations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform, opacity;
+}
+
+/* Smooth Scrolling Optimization */
+.smooth-scroll-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Reduce paint operations */
+.optimize-paint {
+  contain: paint layout;
+}
+

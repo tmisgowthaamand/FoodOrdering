@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
-import { indianLocations, cityAreas } from '../data/mockData';
+import { indianLocations, cityAreas, categories, products } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import LocationSearch from './LocationSearch';
 
@@ -25,6 +25,7 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick, searchQuery = '', on
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [showManualSelection, setShowManualSelection] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // Manual selection state
   const [manualState, setManualState] = useState('Tamil Nadu');
@@ -194,14 +195,16 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick, searchQuery = '', on
 
           {/* Search Bar */}
           <div className="flex-1 max-w-xl hidden md:block">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
               <Input
                 type="text"
-                placeholder="Search for atta, dal, coke and more"
+                placeholder="Search for 2000+ products"
                 value={searchQuery}
                 onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-                className="pl-10 pr-10 py-2.5 w-full bg-gray-100 border-0 rounded-lg focus:bg-white focus:ring-2 focus:ring-[#8B2FC9] transition-all"
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                className="pl-10 pr-10 py-2.5 w-full bg-gray-100 border-0 rounded-lg focus:bg-white focus:ring-2 focus:ring-[#8B2FC9] transition-all shadow-sm"
               />
               {searchQuery && (
                 <button
@@ -210,6 +213,75 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick, searchQuery = '', on
                 >
                   <X className="w-4 h-4" />
                 </button>
+              )}
+
+              {/* Search Suggestions Dropdown */}
+              {isSearchFocused && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 z-50 animate-in fade-in slide-in-from-top-2 max-h-[80vh] overflow-y-auto">
+                  {!searchQuery ? (
+                    <>
+                      {/* Trending Searches */}
+                      <div className="mb-2">
+                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                          <span className="w-1 h-4 bg-[#8B2FC9] rounded-full"></span>
+                          Trending Searches
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {['Milk', 'Bread', 'Eggs', 'Butter', 'Cheese', 'Curd', 'Paneer', 'Chocolate', 'Chips', 'Ice Cream'].map((term) => (
+                            <button
+                              key={term}
+                              className="px-3 py-1.5 bg-gray-50 hover:bg-purple-50 text-gray-700 hover:text-[#8B2FC9] rounded-full text-sm transition-all duration-200 flex items-center gap-1.5 border border-transparent hover:border-purple-100"
+                              onClick={() => onSearchChange && onSearchChange(term)}
+                            >
+                              <Search className="w-3 h-3 opacity-50" />
+                              {term}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* Live Search Results */
+                    <div>
+                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-1 h-4 bg-[#8B2FC9] rounded-full"></span>
+                        Top Results
+                      </h3>
+                      <div className="space-y-2">
+                        {products
+                          .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                          .slice(0, 5)
+                          .map((product) => (
+                            <button
+                              key={product.id}
+                              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors text-left group"
+                              onClick={() => onSearchChange && onSearchChange(product.name)}
+                            >
+                              <div className="w-10 h-10 rounded-md overflow-hidden bg-gray-100 border border-gray-100">
+                                <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 group-hover:text-[#8B2FC9] truncate">
+                                  {product.name}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {product.weight} • ₹{product.price}
+                                </p>
+                              </div>
+                              <div className="text-[#8B2FC9] opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Search className="w-4 h-4" />
+                              </div>
+                            </button>
+                          ))}
+                        {products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                          <div className="text-center py-4 text-gray-500 text-sm">
+                            No products found matching "{searchQuery}"
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -285,7 +357,7 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick, searchQuery = '', on
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <Input
               type="text"
-              placeholder="Search for atta, dal, coke and more"
+              placeholder="Search for 2000+ products"
               value={searchQuery}
               onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
               className="pl-10 pr-10 py-2.5 w-full bg-gray-100 border-0 rounded-lg"

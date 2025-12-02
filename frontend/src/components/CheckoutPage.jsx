@@ -12,7 +12,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
   const [isLoading, setIsLoading] = useState(false);
   const [orderId, setOrderId] = useState(null);
-  
+
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     phone: '',
@@ -82,8 +82,8 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
   };
 
   const createOrder = async () => {
-    const backendUrl = process.env.REACT_APP_BACKEND_URL;
-    
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+
     const orderData = {
       items: cartItems.map(item => ({
         product_id: item.id,
@@ -113,7 +113,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
 
   const handleRazorpayPayment = async () => {
     setIsLoading(true);
-    const backendUrl = process.env.REACT_APP_BACKEND_URL;
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
     try {
       // Load Razorpay script
@@ -262,7 +262,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
               {step === 3 && 'Order Confirmed'}
             </h1>
           </div>
-          
+
           {/* Progress indicator */}
           {step !== 3 && (
             <div className="flex items-center gap-2 mt-4">
@@ -420,7 +420,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
                 <div className="mt-6 p-4 bg-gray-50 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-gray-700">Delivering to:</span>
-                    <button 
+                    <button
                       onClick={() => setStep(1)}
                       className="text-sm text-[#8B2FC9] hover:underline"
                     >
@@ -466,7 +466,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
                   {orderId}
                 </p>
                 <p className="text-sm text-gray-500 mb-6">
-                  {paymentMethod === 'cod' 
+                  {paymentMethod === 'cod'
                     ? 'Please keep the exact amount ready for payment on delivery.'
                     : 'Payment has been successfully processed.'}
                 </p>
@@ -485,7 +485,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
             <div className="md:col-span-1">
               <div className="bg-white rounded-xl p-4 shadow-sm sticky top-24">
                 <h3 className="font-semibold mb-4">Order Summary</h3>
-                
+
                 <div className="space-y-3 max-h-[300px] overflow-y-auto">
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex gap-3">
