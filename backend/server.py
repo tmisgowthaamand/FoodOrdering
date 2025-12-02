@@ -38,15 +38,32 @@ session = requests.Session()
 retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
 session.mount('https://', HTTPAdapter(max_retries=retries))
 
+razorpay_key_id = os.environ.get('RAZORPAY_KEY_ID')
+razorpay_key_secret = os.environ.get('RAZORPAY_KEY_SECRET')
+
+if not razorpay_key_id or not razorpay_key_secret:
+    logger.warning("RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is missing. Payment features will fail.")
+
 razorpay_client = razorpay.Client(
-    auth=(os.environ.get('RAZORPAY_KEY_ID'), os.environ.get('RAZORPAY_KEY_SECRET'))
+    auth=(razorpay_key_id or "", razorpay_key_secret or "")
 )
 # razorpay_client.set_session(session) # Method does not exist, removing to fix crash
 
 # Supabase client
 supabase_url = os.environ.get('SUPABASE_URL')
 supabase_key = os.environ.get('SUPABASE_KEY')
-supabase: Client = create_client(supabase_url, supabase_key)
+
+if not supabase_url or not supabase_key:
+    logger.error("SUPABASE_URL or SUPABASE_KEY is missing. Database connection will fail.")
+    # We might want to raise here, but logging allows the app to start and show the error in logs
+    # raise ValueError("Missing Supabase credentials")
+
+try:
+    supabase: Client = create_client(supabase_url or "", supabase_key or "")
+except Exception as e:
+    logger.error(f"Failed to initialize Supabase client: {e}")
+    # Create a dummy client or let it fail later
+    raise e
 
 # Create the main app without a prefix
 app = FastAPI()
