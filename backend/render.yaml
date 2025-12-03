@@ -7,9 +7,9 @@ services:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: RAZORPAY_KEY_ID
-        value: rzp_test_RmkcOTOMmzqi2v
+        value: rzp_test_Rn2y1nsEX5U59v
       - key: RAZORPAY_KEY_SECRET
-        value: 7uIFPtfa6x9Rzp11M6aomT4o
+        value: 7tfrzU63nQPRPavKu1IFtxyn
       - key: SUPABASE_URL
         value: https://msytkjavapigijxqreji.supabase.co
       - key: SUPABASE_KEY

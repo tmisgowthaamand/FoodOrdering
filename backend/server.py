@@ -152,6 +152,18 @@ async def get_status_checks():
 async def create_razorpay_order(order_data: RazorpayOrderCreate):
     """Create a Razorpay order for payment"""
     try:
+        # Log credentials status (without exposing actual values)
+        key_id = os.environ.get('RAZORPAY_KEY_ID')
+        key_secret = os.environ.get('RAZORPAY_KEY_SECRET')
+        logger.info(f"Razorpay Key ID present: {bool(key_id)}, Key Secret present: {bool(key_secret)}")
+        
+        if not key_id or not key_secret:
+            logger.error("Razorpay credentials are missing!")
+            raise HTTPException(
+                status_code=500, 
+                detail="Payment gateway not configured. Please contact support."
+            )
+        
         razorpay_order = razorpay_client.order.create({
             "amount": order_data.amount,
             "currency": order_data.currency,
@@ -161,10 +173,16 @@ async def create_razorpay_order(order_data: RazorpayOrderCreate):
             "id": razorpay_order["id"],
             "amount": razorpay_order["amount"],
             "currency": razorpay_order["currency"],
-            "key_id": os.environ.get('RAZORPAY_KEY_ID')
+            "key_id": key_id
         }
+    except razorpay.errors.BadRequestError as e:
+        logger.error(f"Razorpay BadRequest Error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid payment request: {str(e)}")
+    except razorpay.errors.ServerError as e:
+        logger.error(f"Razorpay Server Error: {str(e)}")
+        raise HTTPException(status_code=503, detail="Payment gateway temporarily unavailable")
     except Exception as e:
-        logger.error(f"Error creating Razorpay order: {str(e)}")
+        logger.error(f"Error creating Razorpay order: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to create payment order: {str(e)}")
 
 
