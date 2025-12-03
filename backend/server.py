@@ -155,20 +155,31 @@ async def create_razorpay_order(order_data: RazorpayOrderCreate):
         # Log credentials status (without exposing actual values)
         key_id = os.environ.get('RAZORPAY_KEY_ID')
         key_secret = os.environ.get('RAZORPAY_KEY_SECRET')
+        
+        # Enhanced logging
+        logger.info(f"Razorpay order creation request - Amount: {order_data.amount} paise")
         logger.info(f"Razorpay Key ID present: {bool(key_id)}, Key Secret present: {bool(key_secret)}")
         
+        if key_id:
+            logger.info(f"Key ID starts with: {key_id[:10]}...")
+        
         if not key_id or not key_secret:
-            logger.error("Razorpay credentials are missing!")
+            logger.error("❌ CRITICAL: Razorpay credentials are missing from environment variables!")
+            logger.error("Please configure RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Render dashboard")
             raise HTTPException(
                 status_code=500, 
                 detail="Payment gateway not configured. Please contact support."
             )
         
+        logger.info("Creating Razorpay order...")
         razorpay_order = razorpay_client.order.create({
             "amount": order_data.amount,
             "currency": order_data.currency,
             "payment_capture": 1
         })
+        
+        logger.info(f"✅ Razorpay order created successfully: {razorpay_order['id']}")
+        
         return {
             "id": razorpay_order["id"],
             "amount": razorpay_order["amount"],
@@ -176,13 +187,28 @@ async def create_razorpay_order(order_data: RazorpayOrderCreate):
             "key_id": key_id
         }
     except razorpay.errors.BadRequestError as e:
-        logger.error(f"Razorpay BadRequest Error: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Invalid payment request: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"❌ Razorpay BadRequest Error: {error_msg}")
+        
+        # Provide specific error messages
+        if "Authentication failed" in error_msg or "authentication" in error_msg.lower():
+            logger.error("Authentication failed - This usually means:")
+            logger.error("1. Invalid API Key ID or Secret")
+            logger.error("2. Keys not configured in deployment environment")
+            logger.error("3. Test mode not enabled in Razorpay dashboard")
+            logger.error(f"Current Key ID: {key_id[:15] if key_id else 'MISSING'}...")
+            raise HTTPException(
+                status_code=400, 
+                detail="Payment gateway authentication failed. Please ensure Razorpay credentials are correctly configured on the server."
+            )
+        else:
+            raise HTTPException(status_code=400, detail=f"Invalid payment request: {error_msg}")
+            
     except razorpay.errors.ServerError as e:
-        logger.error(f"Razorpay Server Error: {str(e)}")
+        logger.error(f"❌ Razorpay Server Error: {str(e)}")
         raise HTTPException(status_code=503, detail="Payment gateway temporarily unavailable")
     except Exception as e:
-        logger.error(f"Error creating Razorpay order: {type(e).__name__}: {str(e)}")
+        logger.error(f"❌ Unexpected error creating Razorpay order: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to create payment order: {str(e)}")
 
 
