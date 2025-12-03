@@ -66,7 +66,15 @@ except Exception as e:
     raise e
 
 # Create the main app without a prefix
-app = FastAPI()
+app = FastAPI(title="Foodeo API", description="Backend for Foodeo Food Ordering Application")
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Welcome to Foodeo Backend API",
+        "status": "active",
+        "documentation": "/docs"
+    }
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -119,7 +127,7 @@ class VerifyPaymentRequest(BaseModel):
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Foodeo API v1"}
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
