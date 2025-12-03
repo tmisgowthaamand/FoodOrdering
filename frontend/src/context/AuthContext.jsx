@@ -36,7 +36,7 @@ export function AuthProvider({ children }) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://foodeo-liard.vercel.app',
+          redirectTo: window.location.origin,
         }
       });
       if (error) throw error;
@@ -115,7 +115,7 @@ export function AuthProvider({ children }) {
           data: {
             full_name: name,
           },
-          emailRedirectTo: 'https://foodeo-liard.vercel.app',
+          emailRedirectTo: window.location.origin,
         }
       });
       if (error) throw error;
