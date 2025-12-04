@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
         .from('users')
         .select('role')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
