@@ -9,6 +9,25 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const fetchUserRole = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.warn('Error fetching user role:', error.message);
+        return 'customer';
+      }
+      return data?.role || 'customer';
+    } catch (err) {
+      console.error('Unexpected error fetching role:', err);
+      return 'customer';
+    }
+  };
+
   useEffect(() => {
     if (!supabase) {
       setLoading(false);
@@ -16,17 +35,27 @@ export function AuthProvider({ children }) {
     }
 
     // Check for existing session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        const role = await fetchUserRole(session.user.id);
+        setUser({ ...session.user, role });
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
+        if (session?.user) {
+          const role = await fetchUserRole(session.user.id);
+          setUser({ ...session.user, role });
+        } else {
+          setUser(null);
+        }
         setLoading(false);
       }
     );

@@ -25,10 +25,13 @@ const PrivacyPolicy = React.lazy(() => import('./components/PolicyPages').then(m
 const TermsConditions = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.TermsConditions })));
 const ShippingPolicy = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.ShippingPolicy })));
 const RefundPolicy = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.RefundPolicy })));
+const AdminApp = React.lazy(() => import('./admin/AdminApp'));
+import AdminRoute from './components/AdminRoute';
 import { products, categories } from './data/mockData';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from "next-themes";
 
 function App() {
   React.useEffect(() => {
@@ -43,6 +46,13 @@ function App() {
       setIsLoading(false);
     }, 2000);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Check for admin route on mount
+  React.useEffect(() => {
+    if (window.location.pathname === '/admin') {
+      setCurrentPage('admin');
+    }
   }, []);
 
   const [cart, setCart] = useState({});
@@ -69,6 +79,12 @@ function App() {
       if (e.ctrlKey && e.shiftKey && e.key === 'H') {
         setCurrentPage('home');
         toast.info('🏠 Returning to Home', {
+          duration: 2000,
+        });
+      }
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        setCurrentPage('admin');
+        toast.info('🔒 Opening Admin Panel', {
           duration: 2000,
         });
       }
@@ -175,7 +191,6 @@ function App() {
   if (currentPage === 'checkout') {
     return (
       <AuthProvider>
-
         <React.Suspense fallback={<Loader />}>
           <CheckoutPage
             cart={cart}
@@ -195,10 +210,18 @@ function App() {
   if (currentPage === 'order-testing') return <React.Suspense fallback={<Loader />}><OrderTestingPage /></React.Suspense>;
   if (currentPage === 'my-orders') return <React.Suspense fallback={<Loader />}><MyOrders onBack={handleBackToHome} /></React.Suspense>;
 
+  if (currentPage === 'admin') {
+    return (
+      <AdminRoute>
+        <React.Suspense fallback={<Loader />}>
+          <AdminApp />
+        </React.Suspense>
+      </AdminRoute>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
-
-
       {isLoading && <Loader />}
 
       {/* Header */}
@@ -297,8 +320,6 @@ function App() {
     </div>
   );
 }
-
-import { ThemeProvider } from "next-themes";
 
 function AppWrapper() {
   return (
