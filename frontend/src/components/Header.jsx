@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, User, ShoppingCart, ChevronDown, Menu, X, LogOut, AlertCircle } from 'lucide-react';
+import { Search, MapPin, User, ShoppingCart, ChevronDown, Menu, X, LogOut, AlertCircle, Package } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -20,7 +20,7 @@ import { indianLocations, cityAreas, categories, products } from '../data/mockDa
 import { useAuth } from '../context/AuthContext';
 import LocationSearch from './LocationSearch';
 
-const Header = ({ cartCount = 0, onCartClick, onLoginClick, searchQuery = '', onSearchChange }) => {
+const Header = ({ cartCount = 0, onCartClick, onLoginClick, onMyOrdersClick, searchQuery = '', onSearchChange }) => {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
@@ -323,6 +323,18 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick, searchQuery = '', on
               >
                 <User className="w-5 h-5" />
                 <span className="font-medium">Login</span>
+              </Button>
+            )}
+
+            {/* My Orders Button */}
+            {isAuthenticated && onMyOrdersClick && (
+              <Button
+                variant="ghost"
+                onClick={onMyOrdersClick}
+                className="hidden md:flex items-center gap-2 text-gray-700 hover:text-[#8B2FC9] hover:bg-purple-50"
+              >
+                <Package className="w-5 h-5" />
+                <span className="font-medium">My Orders</span>
               </Button>
             )}
 

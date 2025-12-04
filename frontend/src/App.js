@@ -19,6 +19,7 @@ import WhatsAppButton from './components/WhatsAppButton';
 const CheckoutPage = React.lazy(() => import('./components/CheckoutPage'));
 const SearchResults = React.lazy(() => import('./components/SearchResults'));
 const OrderTestingPage = React.lazy(() => import('./components/OrderTestingPage'));
+const MyOrders = React.lazy(() => import('./components/MyOrders'));
 const PrivacyPolicy = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.PrivacyPolicy })));
 const TermsConditions = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.TermsConditions })));
 const ShippingPolicy = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.ShippingPolicy })));
@@ -183,6 +184,7 @@ function App() {
   if (currentPage === 'shipping') return <React.Suspense fallback={<Loader />}><ShippingPolicy onBack={handleBackToHome} /></React.Suspense>;
   if (currentPage === 'refund') return <React.Suspense fallback={<Loader />}><RefundPolicy onBack={handleBackToHome} /></React.Suspense>;
   if (currentPage === 'order-testing') return <React.Suspense fallback={<Loader />}><OrderTestingPage /></React.Suspense>;
+  if (currentPage === 'my-orders') return <React.Suspense fallback={<Loader />}><MyOrders onBack={handleBackToHome} /></React.Suspense>;
 
   return (
     <div className="min-h-screen bg-white">
@@ -195,6 +197,7 @@ function App() {
         cartCount={cartCount}
         onCartClick={() => setIsCartOpen(true)}
         onLoginClick={() => setIsLoginOpen(true)}
+        onMyOrdersClick={() => setCurrentPage('my-orders')}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
