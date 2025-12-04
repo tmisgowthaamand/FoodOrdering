@@ -275,12 +275,16 @@ function App() {
   );
 }
 
+import { ThemeProvider } from "next-themes";
+
 function AppWrapper() {
   return (
-    <AuthProvider>
-      <Toaster position="top-right" richColors />
-      <App />
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <AuthProvider>
+        <Toaster position="top-right" richColors />
+        <App />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
