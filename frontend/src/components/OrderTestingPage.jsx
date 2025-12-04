@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './OrderTestingPage.css';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '../config';
 
 const OrderTestingPage = () => {
   const [orders, setOrders] = useState([]);
@@ -34,7 +33,7 @@ const OrderTestingPage = () => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setTrackingData(data);
-      
+
       // Validate tracking data
       validateTrackingData(data);
       addTestResult(`✅ Fetched tracking for order ${orderId.slice(0, 8)}`, 'success');
@@ -79,10 +78,10 @@ const OrderTestingPage = () => {
       });
 
       const data = await response.json();
-      
+
       if (response.ok && data.success) {
         addTestResult(`✅ Order cancelled successfully`, 'success');
-        
+
         // Validate cancellation response
         if (data.refund_initiated) {
           addTestResult(`✅ Refund initiated automatically`, 'success');
@@ -90,7 +89,7 @@ const OrderTestingPage = () => {
           addTestResult(`✅ Refund amount: ₹${data.refund.amount}`, 'info');
           addTestResult(`✅ Refund status: ${data.refund.status}`, 'info');
         }
-        
+
         // Refresh tracking
         await fetchOrderTracking(orderId);
       } else {
@@ -111,7 +110,7 @@ const OrderTestingPage = () => {
       const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/refund-status`);
       const data = await response.json();
       setRefundStatus(data);
-      
+
       // Validate refund data
       if (data.refund_id) {
         addTestResult(`✅ Refund ID saved: ${data.refund_id}`, 'success');
@@ -206,33 +205,33 @@ const OrderTestingPage = () => {
   const runFullTestSuite = async () => {
     setTestResults([]);
     addTestResult('🚀 Starting comprehensive test suite...', 'info');
-    
+
     // Test 1: Create COD order
     addTestResult('\n📦 Test 1: Creating COD order...', 'info');
     await createTestOrder('cod');
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     if (selectedOrder) {
       // Test 2: Check tracking
       addTestResult('\n📍 Test 2: Checking order tracking...', 'info');
       await fetchOrderTracking(selectedOrder);
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Test 3: Update status to preparing
       addTestResult('\n🍳 Test 3: Updating to preparing status...', 'info');
       await updateOrderStatus(selectedOrder, 'preparing');
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Test 4: Try cancellation (should work within time window)
       addTestResult('\n❌ Test 4: Testing cancellation within time window...', 'info');
       await testCancelOrder(selectedOrder, 'Testing cancellation flow');
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Test 5: Check refund status
       addTestResult('\n💰 Test 5: Checking refund status...', 'info');
       await fetchRefundStatus(selectedOrder);
     }
-    
+
     addTestResult('\n✅ Test suite completed!', 'success');
   };
 
@@ -261,7 +260,7 @@ const OrderTestingPage = () => {
         {/* Control Panel */}
         <div className="testing-panel">
           <h2>🎮 Control Panel</h2>
-          
+
           <div className="button-group">
             <button onClick={runFullTestSuite} disabled={loading} className="btn-primary">
               🚀 Run Full Test Suite
@@ -283,8 +282,8 @@ const OrderTestingPage = () => {
           {/* Order Selection */}
           <div className="order-selector">
             <h3>Select Order</h3>
-            <select 
-              value={selectedOrder || ''} 
+            <select
+              value={selectedOrder || ''}
               onChange={(e) => {
                 setSelectedOrder(e.target.value);
                 if (e.target.value) {
