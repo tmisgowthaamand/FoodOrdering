@@ -17,6 +17,11 @@ const MyOrders = ({ onBack }) => {
         fetchOrders();
     }, []);
 
+    useEffect(() => {
+        console.log('Modal state changed:', showCancelModal);
+        console.log('Order to cancel:', orderToCancel);
+    }, [showCancelModal, orderToCancel]);
+
     const fetchOrders = async () => {
         try {
             setLoading(true);
@@ -48,10 +53,16 @@ const MyOrders = ({ onBack }) => {
         fetchOrderTracking(order.id);
     };
 
-    const handleCancelClick = (orderId) => {
+    const handleCancelClick = (orderId, event) => {
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+        console.log('Cancel button clicked for order:', orderId);
         setOrderToCancel(orderId);
         setShowCancelModal(true);
         setCancelReason('');
+        console.log('Modal should now be visible');
     };
 
     const handleCancelOrder = async () => {
@@ -244,7 +255,7 @@ const MyOrders = ({ onBack }) => {
 
                         {trackingData.can_cancel && (
                             <button
-                                onClick={() => handleCancelClick(trackingData.order_id)}
+                                onClick={(e) => handleCancelClick(trackingData.order_id, e)}
                                 className="cancel-order-btn"
                             >
                                 Cancel Order
