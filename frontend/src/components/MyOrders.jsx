@@ -43,6 +43,13 @@ const MyOrders = ({ onBack }) => {
 
             const response = await fetch(url);
             const data = await response.json();
+
+            if (!Array.isArray(data)) {
+                console.error("API returned non-array:", data);
+                setOrders([]);
+                return;
+            }
+
             const sortedOrders = data.sort((a, b) =>
                 new Date(b.created_at) - new Date(a.created_at)
             );
