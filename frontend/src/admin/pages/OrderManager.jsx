@@ -38,13 +38,13 @@ const OrderManager = () => {
         try {
             const { error } = await supabase
                 .from('orders')
-                .update({ status: newStatus })
+                .update({ order_status: newStatus })
                 .eq('id', orderId);
 
             if (error) throw error;
 
             setOrders(orders.map(order =>
-                order.id === orderId ? { ...order, status: newStatus } : order
+                order.id === orderId ? { ...order, order_status: newStatus } : order
             ));
         } catch (error) {
             console.error('Error updating status:', error);
@@ -53,9 +53,12 @@ const OrderManager = () => {
     };
 
     const filteredOrders = orders.filter(order => {
+        const customerName = order.customer_name || order.users?.full_name || '';
+        const customerEmail = order.customer_email || order.users?.email || '';
         const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.users?.email?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+            customerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            customerName.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'all' || order.order_status === statusFilter;
         return matchesSearch && matchesStatus;
     });
 
@@ -64,6 +67,7 @@ const OrderManager = () => {
             case 'delivered': return 'bg-green-100 text-green-700';
             case 'processing': return 'bg-blue-100 text-blue-700';
             case 'cancelled': return 'bg-red-100 text-red-700';
+            case 'confirmed': return 'bg-purple-100 text-purple-700';
             default: return 'bg-yellow-100 text-yellow-700';
         }
     };
@@ -80,7 +84,7 @@ const OrderManager = () => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search by Order ID or Email..."
+                            placeholder="Search by Order ID, Name or Email..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -95,6 +99,7 @@ const OrderManager = () => {
                         >
                             <option value="all">All Status</option>
                             <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
                             <option value="processing">Processing</option>
                             <option value="delivered">Delivered</option>
                             <option value="cancelled">Cancelled</option>
@@ -122,8 +127,12 @@ const OrderManager = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div>
-                                            <div className="font-medium text-gray-900">{order.users?.full_name || 'Unknown'}</div>
-                                            <div className="text-xs text-gray-500">{order.users?.email}</div>
+                                            <div className="font-medium text-gray-900">
+                                                {order.customer_name || order.users?.full_name || 'Unknown'}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                                {order.customer_email || order.users?.email}
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-gray-500">
@@ -132,11 +141,12 @@ const OrderManager = () => {
                                     <td className="px-6 py-4 font-medium">₹{order.total_amount}</td>
                                     <td className="px-6 py-4">
                                         <select
-                                            value={order.status}
+                                            value={order.order_status || 'pending'}
                                             onChange={(e) => updateStatus(order.id, e.target.value)}
-                                            className={`px-2 py-1 rounded-full text-xs font-medium border-none focus:ring-2 focus:ring-purple-500 cursor-pointer ${getStatusColor(order.status)}`}
+                                            className={`px-2 py-1 rounded-full text-xs font-medium border-none focus:ring-2 focus:ring-purple-500 cursor-pointer ${getStatusColor(order.order_status)}`}
                                         >
                                             <option value="pending">Pending</option>
+                                            <option value="confirmed">Confirmed</option>
                                             <option value="processing">Processing</option>
                                             <option value="delivered">Delivered</option>
                                             <option value="cancelled">Cancelled</option>
