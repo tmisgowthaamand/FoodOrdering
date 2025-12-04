@@ -99,6 +99,16 @@ class OrderItem(BaseModel):
     image: str
     weight: str
 
+class UserAddress(BaseModel):
+    id: Optional[str] = None
+    user_id: str
+    label: str
+    address: str
+    city: str
+    pincode: str
+    phone: str
+    is_default: bool = False
+
 class CustomerInfo(BaseModel):
     name: str
     phone: str
@@ -699,6 +709,47 @@ async def get_order_tracking(order_id: str):
     except Exception as e:
         logger.error(f"Error getting order tracking: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get order tracking: {str(e)}")
+
+# Address Management Endpoints
+
+@api_router.get("/addresses/{user_id}")
+async def get_user_addresses(user_id: str):
+    """Get all saved addresses for a user"""
+    try:
+        result = supabase.table('user_addresses').select('*').eq('user_id', user_id).execute()
+        return result.data
+    except Exception as e:
+        logger.error(f"Error fetching addresses: {str(e)}")
+        # If table doesn't exist, return empty list instead of crashing
+        if "relation \"user_addresses\" does not exist" in str(e):
+            return []
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/addresses")
+async def save_user_address(address: UserAddress):
+    """Save a new address"""
+    try:
+        data = address.dict(exclude={'id'})
+        
+        # If set as default, unset others
+        if data.get('is_default'):
+            supabase.table('user_addresses').update({'is_default': False}).eq('user_id', data['user_id']).execute()
+            
+        result = supabase.table('user_addresses').insert(data).execute()
+        return {"success": True, "data": result.data}
+    except Exception as e:
+        logger.error(f"Error saving address: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/addresses/{address_id}")
+async def delete_user_address(address_id: str):
+    """Delete an address"""
+    try:
+        result = supabase.table('user_addresses').delete().eq('id', address_id).execute()
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Error deleting address: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Add CORS middleware BEFORE including routers

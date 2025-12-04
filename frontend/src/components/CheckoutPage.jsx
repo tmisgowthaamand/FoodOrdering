@@ -1,17 +1,21 @@
-import React, { useState, useMemo } from 'react';
-import { ArrowLeft, MapPin, CreditCard, Truck, CheckCircle, Loader2 } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ArrowLeft, MapPin, CreditCard, Truck, CheckCircle, Loader2, Plus, Trash2, Home, Briefcase } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { products } from '../data/mockData';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '../config';
 
 const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
   const [step, setStep] = useState(1); // 1: Address, 2: Payment, 3: Success
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
   const [isLoading, setIsLoading] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [userId, setUserId] = useState('');
 
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
@@ -19,8 +23,32 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
     email: '',
     address: '',
     city: '',
-    pincode: ''
+    pincode: '',
+    label: 'Home' // Home, Work, Other
   });
+
+  // Initialize User ID
+  useEffect(() => {
+    let storedUserId = localStorage.getItem('foodeo_user_id');
+    if (!storedUserId) {
+      storedUserId = 'guest_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('foodeo_user_id', storedUserId);
+    }
+    setUserId(storedUserId);
+    fetchAddresses(storedUserId);
+  }, []);
+
+  const fetchAddresses = async (uid) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/addresses/${uid}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSavedAddresses(data);
+      }
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
+    }
+  };
 
   const cartItems = useMemo(() => {
     return Object.entries(cart)
@@ -65,6 +93,76 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
     return true;
   };
 
+  const handleSaveAddress = async () => {
+    if (!validateAddress()) return;
+
+    setIsLoading(true);
+    try {
+      const addressData = {
+        ...customerInfo,
+        user_id: userId,
+        is_default: savedAddresses.length === 0
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/addresses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(addressData)
+      });
+
+      if (response.ok) {
+        toast.success('Address saved successfully');
+        fetchAddresses(userId);
+        setShowAddressForm(false);
+        // If it's the first address, automatically select it (which is done by default logic usually, but here we just saved it)
+      } else {
+        toast.error('Failed to save address');
+      }
+    } catch (error) {
+      console.error('Error saving address:', error);
+      toast.error('Error saving address');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addressId, e) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this address?')) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/addresses/${addressId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        toast.success('Address deleted');
+        fetchAddresses(userId);
+        // Clear selection if deleted
+        if (customerInfo.id === addressId) {
+          setCustomerInfo({
+            name: '',
+            phone: '',
+            email: '',
+            address: '',
+            city: '',
+            pincode: '',
+            label: 'Home'
+          });
+        }
+      }
+    } catch (error) {
+      toast.error('Failed to delete address');
+    }
+  };
+
+  const selectAddress = (addr) => {
+    setCustomerInfo({
+      ...addr,
+      email: customerInfo.email || '' // Preserve email if entered
+    });
+  };
+
   const handleProceedToPayment = () => {
     if (validateAddress()) {
       setStep(2);
@@ -82,8 +180,6 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
   };
 
   const createOrder = async () => {
-    const backendUrl = process.env.REACT_APP_BACKEND_URL;
-
     const orderData = {
       items: cartItems.map(item => ({
         product_id: item.id,
@@ -98,7 +194,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
       payment_method: paymentMethod
     };
 
-    const response = await fetch(`${backendUrl}/api/orders`, {
+    const response = await fetch(`${API_BASE_URL}/api/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(orderData)
@@ -113,7 +209,6 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
 
   const handleRazorpayPayment = async () => {
     setIsLoading(true);
-    const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
     try {
       // Load Razorpay script
@@ -127,7 +222,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
       const dbOrderId = orderResult.order_id;
 
       // Create Razorpay order
-      const razorpayResponse = await fetch(`${backendUrl}/api/razorpay/create-order`, {
+      const razorpayResponse = await fetch(`${API_BASE_URL}/api/razorpay/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -155,7 +250,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
         handler: async (response) => {
           try {
             // Verify payment
-            const verifyResponse = await fetch(`${backendUrl}/api/razorpay/verify-payment`, {
+            const verifyResponse = await fetch(`${API_BASE_URL}/api/razorpay/verify-payment`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -282,96 +377,189 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
             {/* Step 1: Address */}
             {step === 1 && (
               <div className="bg-white rounded-xl p-6 shadow-sm">
-                <div className="flex items-center gap-2 mb-6">
-                  <MapPin className="w-5 h-5 text-[#8B2FC9]" />
-                  <h2 className="text-lg font-semibold">Delivery Details</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-[#8B2FC9]" />
+                    <h2 className="text-lg font-semibold">Delivery Details</h2>
+                  </div>
+                  {!showAddressForm && savedAddresses.length > 0 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setCustomerInfo({
+                          name: '',
+                          phone: '',
+                          email: '',
+                          address: '',
+                          city: '',
+                          pincode: '',
+                          label: 'Home'
+                        });
+                        setShowAddressForm(true);
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus size={16} /> Add New
+                    </Button>
+                  )}
                 </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={customerInfo.name}
-                      onChange={handleInputChange}
-                      placeholder="Enter your full name"
-                      className="mt-1"
-                    />
+                {!showAddressForm && savedAddresses.length > 0 ? (
+                  <div className="grid gap-4">
+                    {savedAddresses.map((addr) => (
+                      <div
+                        key={addr.id}
+                        onClick={() => selectAddress(addr)}
+                        className={`p-4 border rounded-xl cursor-pointer transition-all ${customerInfo.address === addr.address
+                            ? 'border-[#8B2FC9] bg-purple-50 ring-1 ring-[#8B2FC9]'
+                            : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2 mb-2">
+                            {addr.label === 'Home' && <Home size={16} className="text-[#8B2FC9]" />}
+                            {addr.label === 'Work' && <Briefcase size={16} className="text-[#8B2FC9]" />}
+                            {addr.label === 'Other' && <MapPin size={16} className="text-[#8B2FC9]" />}
+                            <span className="font-semibold">{addr.label}</span>
+                          </div>
+                          <button
+                            onClick={(e) => handleDeleteAddress(addr.id, e)}
+                            className="text-gray-400 hover:text-red-500"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                        <p className="font-medium">{addr.name}</p>
+                        <p className="text-sm text-gray-600">{addr.address}</p>
+                        <p className="text-sm text-gray-600">{addr.city}, {addr.pincode}</p>
+                        <p className="text-sm text-gray-600 mt-1">Phone: {addr.phone}</p>
+                      </div>
+                    ))}
                   </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Label Selection */}
+                    <div className="flex gap-4 mb-4">
+                      {['Home', 'Work', 'Other'].map((label) => (
+                        <button
+                          key={label}
+                          onClick={() => setCustomerInfo(prev => ({ ...prev, label }))}
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${customerInfo.label === label
+                              ? 'bg-[#8B2FC9] text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="phone">Phone Number *</Label>
+                      <Label htmlFor="name">Full Name *</Label>
                       <Input
-                        id="phone"
-                        name="phone"
-                        value={customerInfo.phone}
+                        id="name"
+                        name="name"
+                        value={customerInfo.name}
                         onChange={handleInputChange}
-                        placeholder="10-digit number"
-                        maxLength={10}
+                        placeholder="Enter your full name"
                         className="mt-1"
                       />
                     </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="phone">Phone Number *</Label>
+                        <Input
+                          id="phone"
+                          name="phone"
+                          value={customerInfo.phone}
+                          onChange={handleInputChange}
+                          placeholder="10-digit number"
+                          maxLength={10}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">Email (Optional)</Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={customerInfo.email}
+                          onChange={handleInputChange}
+                          placeholder="your@email.com"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+
                     <div>
-                      <Label htmlFor="email">Email (Optional)</Label>
+                      <Label htmlFor="address">Complete Address *</Label>
                       <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={customerInfo.email}
+                        id="address"
+                        name="address"
+                        value={customerInfo.address}
                         onChange={handleInputChange}
-                        placeholder="your@email.com"
+                        placeholder="House/Flat No., Building, Street, Area"
                         className="mt-1"
                       />
                     </div>
-                  </div>
 
-                  <div>
-                    <Label htmlFor="address">Complete Address *</Label>
-                    <Input
-                      id="address"
-                      name="address"
-                      value={customerInfo.address}
-                      onChange={handleInputChange}
-                      placeholder="House/Flat No., Building, Street, Area"
-                      className="mt-1"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="city">City *</Label>
-                      <Input
-                        id="city"
-                        name="city"
-                        value={customerInfo.city}
-                        onChange={handleInputChange}
-                        placeholder="Enter city"
-                        className="mt-1"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="city">City *</Label>
+                        <Input
+                          id="city"
+                          name="city"
+                          value={customerInfo.city}
+                          onChange={handleInputChange}
+                          placeholder="Enter city"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="pincode">Pincode *</Label>
+                        <Input
+                          id="pincode"
+                          name="pincode"
+                          value={customerInfo.pincode}
+                          onChange={handleInputChange}
+                          placeholder="6-digit pincode"
+                          maxLength={6}
+                          className="mt-1"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="pincode">Pincode *</Label>
-                      <Input
-                        id="pincode"
-                        name="pincode"
-                        value={customerInfo.pincode}
-                        onChange={handleInputChange}
-                        placeholder="6-digit pincode"
-                        maxLength={6}
-                        className="mt-1"
-                      />
+
+                    <div className="flex gap-3 mt-6">
+                      {savedAddresses.length > 0 && (
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowAddressForm(false)}
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                      <Button
+                        onClick={handleSaveAddress}
+                        disabled={isLoading}
+                        className="flex-1 bg-[#8B2FC9] hover:bg-[#7a26b3]"
+                      >
+                        {isLoading ? <Loader2 className="animate-spin" /> : 'Save & Proceed'}
+                      </Button>
                     </div>
                   </div>
-                </div>
+                )}
 
-                <Button
-                  onClick={handleProceedToPayment}
-                  className="w-full mt-6 bg-[#8B2FC9] hover:bg-[#7a26b3] py-3"
-                >
-                  Proceed to Payment
-                </Button>
+                {!showAddressForm && savedAddresses.length > 0 && (
+                  <Button
+                    onClick={handleProceedToPayment}
+                    className="w-full mt-6 bg-[#8B2FC9] hover:bg-[#7a26b3] py-3"
+                  >
+                    Proceed to Payment
+                  </Button>
+                )}
               </div>
             )}
 
