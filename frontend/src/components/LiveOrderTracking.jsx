@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api';
 import { Package, Truck, MapPin, Phone, Clock, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { GOOGLE_MAPS_API_KEY } from '../config';
 import './LiveOrderTracking.css';
 
 const containerStyle = {
@@ -14,9 +15,9 @@ const containerStyle = {
 const STORE_LOCATION = { lat: 19.0760, lng: 72.8777 };
 
 const LiveOrderTracking = ({ order, trackingData, onCancel }) => {
-    const { isLoaded } = useJsApiLoader({
+    const { isLoaded, loadError } = useJsApiLoader({
         id: 'google-map-script',
-        googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY
+        googleMapsApiKey: GOOGLE_MAPS_API_KEY
     });
 
     const [map, setMap] = useState(null);
@@ -27,6 +28,8 @@ const LiveOrderTracking = ({ order, trackingData, onCancel }) => {
 
     // Calculate progress based on status
     useEffect(() => {
+        if (!trackingData) return;
+
         const status = trackingData.order_status;
         let newProgress = 0;
 
@@ -41,11 +44,11 @@ const LiveOrderTracking = ({ order, trackingData, onCancel }) => {
         }
 
         setProgress(newProgress);
-    }, [trackingData.order_status]);
+    }, [trackingData]);
 
     // Simulate driver movement if out for delivery
     useEffect(() => {
-        if (trackingData.order_status === 'out_for_delivery' && customerLocation) {
+        if (trackingData?.order_status === 'out_for_delivery' && customerLocation) {
             const interval = setInterval(() => {
                 setDriverLocation(prev => {
                     // Simple linear interpolation for demo
@@ -65,7 +68,7 @@ const LiveOrderTracking = ({ order, trackingData, onCancel }) => {
 
             return () => clearInterval(interval);
         }
-    }, [trackingData.order_status, customerLocation]);
+    }, [trackingData?.order_status, customerLocation]);
 
     // Geocode customer address (Mock for now, using a fixed offset from store)
     useEffect(() => {
@@ -108,6 +111,38 @@ const LiveOrderTracking = ({ order, trackingData, onCancel }) => {
             default: return <Clock className="w-6 h-6 text-gray-500" />;
         }
     };
+
+    if (loadError) {
+        return (
+            <div className="live-tracking-container error-state">
+                <div className="p-8 text-center">
+                    <p className="text-red-500 mb-2">Unable to load map</p>
+                    <p className="text-sm text-gray-500">{loadError.message}</p>
+                </div>
+                {/* Still show status sheet even if map fails */}
+                <div className="tracking-sheet static-sheet">
+                    <div className="status-header-row">
+                        <div className="status-icon-wrapper">
+                            {getStatusIcon(trackingData.order_status)}
+                        </div>
+                        <div className="status-text">
+                            <h3>{getStatusMessage(trackingData.order_status)}</h3>
+                            <p>{trackingData.order_status === 'delivered' ? 'Enjoy your meal!' : `Arriving in ${eta}`}</p>
+                        </div>
+                    </div>
+                    {/* Cancel Button (if applicable) */}
+                    {trackingData.can_cancel && (
+                        <button
+                            onClick={onCancel}
+                            className="w-full mt-4 py-3 bg-red-50 text-red-600 rounded-xl font-semibold hover:bg-red-100 transition-colors"
+                        >
+                            Cancel Order
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     if (!isLoaded) return <div className="map-loading">Loading Map...</div>;
 
@@ -208,7 +243,7 @@ const LiveOrderTracking = ({ order, trackingData, onCancel }) => {
                 </div>
 
                 {/* Delivery Partner Info */}
-                {trackingData.delivery.partner_name && (
+                {trackingData.delivery && trackingData.delivery.partner_name && (
                     <div className="driver-info-card">
                         <div className="driver-avatar">
                             <img src="https://cdn-icons-png.flaticon.com/512/4825/4825038.png" alt="Driver" />
