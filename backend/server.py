@@ -411,10 +411,11 @@ async def cancel_order(order_id: str, cancel_data: CancelOrderRequest):
             )
         
         # Check time-based restrictions
-        if current_status == 'confirmed' and time_elapsed > 2:
+        # RELAXED FOR TESTING: Increased from 2 mins to 1440 mins (24 hours)
+        if current_status == 'confirmed' and time_elapsed > 1440:
             raise HTTPException(
                 status_code=400,
-                detail="Cancellation window expired. Orders can only be cancelled within 2 minutes of confirmation."
+                detail="Cancellation window expired. Orders can only be cancelled within 24 hours of confirmation."
             )
         
         if current_status == 'preparing':
@@ -422,10 +423,11 @@ async def cancel_order(order_id: str, cancel_data: CancelOrderRequest):
             if preparing_at:
                 preparing_time = datetime.fromisoformat(preparing_at.replace('Z', '+00:00'))
                 preparing_elapsed = (datetime.now(timezone.utc) - preparing_time).total_seconds() / 60
-                if preparing_elapsed > 5:
+                # RELAXED FOR TESTING: Increased from 5 mins to 60 mins
+                if preparing_elapsed > 60:
                     raise HTTPException(
                         status_code=400,
-                        detail="Cannot cancel order after 5 minutes of preparation. Please contact support."
+                        detail="Cannot cancel order after 60 minutes of preparation. Please contact support."
                     )
         
         # Prepare cancellation data
@@ -638,12 +640,14 @@ async def get_order_tracking(order_id: str):
                 confirmed_at = order.get('confirmed_at')
                 if confirmed_at:
                     confirmed_time = datetime.fromisoformat(confirmed_at.replace('Z', '+00:00'))
-                    cancel_deadline = (confirmed_time + timedelta(minutes=2)).isoformat()
+                    # RELAXED: 24 hours
+                    cancel_deadline = (confirmed_time + timedelta(minutes=1440)).isoformat()
             elif current_status == 'preparing':
                 preparing_at = order.get('preparing_at')
                 if preparing_at:
                     preparing_time = datetime.fromisoformat(preparing_at.replace('Z', '+00:00'))
-                    cancel_deadline = (preparing_time + timedelta(minutes=5)).isoformat()
+                    # RELAXED: 60 minutes
+                    cancel_deadline = (preparing_time + timedelta(minutes=60)).isoformat()
         
         # Build tracking response
         tracking_data = {

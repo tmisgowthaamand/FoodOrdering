@@ -166,7 +166,7 @@ function App() {
   if (currentPage === 'checkout') {
     return (
       <AuthProvider>
-        <Toaster position="top-right" richColors />
+
         <React.Suspense fallback={<Loader />}>
           <CheckoutPage
             cart={cart}
@@ -188,7 +188,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Toaster position="top-right" richColors />
+
 
       {isLoading && <Loader />}
 
@@ -278,6 +278,7 @@ function App() {
 function AppWrapper() {
   return (
     <AuthProvider>
+      <Toaster position="top-right" richColors />
       <App />
     </AuthProvider>
   );

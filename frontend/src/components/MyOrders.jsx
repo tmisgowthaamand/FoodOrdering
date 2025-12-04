@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Clock, CheckCircle, XCircle, Truck, MapPin, Phone, RefreshCw, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
 import './MyOrders.css';
 import './MyOrdersModal.css';
 import { API_BASE_URL } from '../config';
@@ -67,7 +68,7 @@ const MyOrders = ({ onBack }) => {
 
     const handleCancelOrder = async () => {
         if (!cancelReason.trim()) {
-            alert('Please provide a cancellation reason');
+            toast.error('Please provide a cancellation reason');
             return;
         }
 
@@ -86,19 +87,19 @@ const MyOrders = ({ onBack }) => {
 
             if (data.success) {
                 setShowCancelModal(false);
-                alert('Order cancelled successfully!');
+                toast.success('Order cancelled successfully!');
                 if (data.refund_initiated) {
-                    alert(`Refund of ₹${data.refund.amount} will be processed in 5-7 business days`);
+                    toast.info(`Refund of ₹${data.refund.amount} will be processed in 5-7 business days`);
                 }
                 fetchOrders();
                 if (trackingData) {
                     fetchOrderTracking(orderToCancel);
                 }
             } else {
-                alert(data.detail || 'Failed to cancel order');
+                toast.error(data.detail || 'Failed to cancel order');
             }
         } catch (error) {
-            alert('Error cancelling order: ' + error.message);
+            toast.error('Error cancelling order: ' + error.message);
         }
     };
 
