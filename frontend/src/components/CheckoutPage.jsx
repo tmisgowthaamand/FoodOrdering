@@ -68,9 +68,17 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
       .filter((item) => item.id);
   }, [cart]);
 
-  const totalAmount = useMemo(() => {
+  const subtotal = useMemo(() => {
     return cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [cartItems]);
+
+  const gstAmount = useMemo(() => {
+    return Math.round(subtotal * 0.05); // 5% GST
+  }, [subtotal]);
+
+  const totalAmount = useMemo(() => {
+    return subtotal + gstAmount;
+  }, [subtotal, gstAmount]);
 
   const totalSavings = useMemo(() => {
     return cartItems.reduce(
