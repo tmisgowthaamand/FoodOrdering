@@ -11,8 +11,8 @@ const containerStyle = {
     borderRadius: '16px',
 };
 
-// Mock coordinates for demo (Store in Mumbai)
-const STORE_LOCATION = { lat: 19.0760, lng: 72.8777 };
+// Mock coordinates for demo (Store in Chennai)
+const STORE_LOCATION = { lat: 13.0827, lng: 80.2707 };
 
 const LiveOrderTracking = ({ order, trackingData, onCancel }) => {
     const { isLoaded, loadError } = useJsApiLoader({
