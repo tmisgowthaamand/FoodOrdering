@@ -122,6 +122,7 @@ class CreateOrderRequest(BaseModel):
     total_amount: float
     customer: CustomerInfo
     payment_method: str  # 'razorpay' or 'cod'
+    user_id: Optional[str] = None
 
 class RazorpayOrderCreate(BaseModel):
     amount: int  # Amount in paise
@@ -293,7 +294,8 @@ async def create_order(order_data: CreateOrderRequest):
             "payment_status": "pending" if order_data.payment_method == "razorpay" else "cod",
             "order_status": "confirmed" if order_data.payment_method == "cod" else "pending",
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat()
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "user_id": order_data.user_id
         }
         
         # Insert into Supabase

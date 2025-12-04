@@ -199,7 +199,8 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
       })),
       total_amount: totalAmount,
       customer: customerInfo,
-      payment_method: paymentMethod
+      payment_method: paymentMethod,
+      user_id: userId
     };
 
     const response = await fetch(`${API_BASE_URL}/api/orders`, {
