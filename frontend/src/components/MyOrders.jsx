@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Clock, CheckCircle, XCircle, Truck, MapPin, Phone, RefreshCw, ChevronRight } from 'lucide-react';
 import './MyOrders.css';
+import './MyOrdersModal.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
