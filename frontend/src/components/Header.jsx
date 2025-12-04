@@ -326,8 +326,9 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick, onMyOrdersClick, sea
               </Button>
             )}
 
+
             {/* My Orders Button */}
-            {isAuthenticated && onMyOrdersClick && (
+            {onMyOrdersClick && (
               <Button
                 variant="ghost"
                 onClick={onMyOrdersClick}
@@ -337,6 +338,7 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick, onMyOrdersClick, sea
                 <span className="font-medium">My Orders</span>
               </Button>
             )}
+
 
             {/* Cart Button */}
             <Button
