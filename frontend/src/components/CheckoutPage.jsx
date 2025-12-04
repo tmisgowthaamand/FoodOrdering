@@ -707,11 +707,15 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
                 <div className="border-t mt-4 pt-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Subtotal</span>
-                    <span>₹{totalAmount}</span>
+                    <span>₹{subtotal}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Delivery Fee</span>
                     <span className="text-green-600">FREE</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">GST (5%)</span>
+                    <span>₹{gstAmount}</span>
                   </div>
                   {totalSavings > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
