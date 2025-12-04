@@ -20,17 +20,19 @@ const HighlightText = ({ text, highlight }) => {
   );
 };
 
-const ProductCard = ({ product, onAddToCart, cartQuantity = 0, searchQuery = '' }) => {
+const ProductCard = ({ product, onAddToCart, cartQuantity = 0, searchQuery = '', onProductClick }) => {
   const [quantity, setQuantity] = useState(cartQuantity);
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleAdd = () => {
+  const handleAdd = (e) => {
+    e && e.stopPropagation();
     const newQty = quantity + 1;
     setQuantity(newQty);
     onAddToCart && onAddToCart(product, newQty);
   };
 
-  const handleRemove = () => {
+  const handleRemove = (e) => {
+    e && e.stopPropagation();
     if (quantity > 0) {
       const newQty = quantity - 1;
       setQuantity(newQty);
@@ -40,7 +42,8 @@ const ProductCard = ({ product, onAddToCart, cartQuantity = 0, searchQuery = '' 
 
   return (
     <div
-      className="bg-white rounded-2xl border border-gray-100/50 overflow-hidden transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-purple-100 relative group h-full flex flex-col"
+      onClick={() => onProductClick && onProductClick(product)}
+      className="bg-white rounded-2xl border border-gray-100/50 overflow-hidden transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-purple-100 relative group h-full flex flex-col cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

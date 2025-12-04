@@ -14,6 +14,7 @@ import LoginModal from './components/LoginModal';
 import Loader from './components/Loader';
 import LazyLoadSection from './components/LazyLoadSection';
 import WhatsAppButton from './components/WhatsAppButton';
+import ProductDetailsModal from './components/ProductDetailsModal';
 
 // Lazy load components for performance
 const CheckoutPage = React.lazy(() => import('./components/CheckoutPage'));
@@ -141,8 +142,16 @@ function App() {
     );
   }, [searchQuery]);
 
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  const handleProductClick = (product) => {
+    setSelectedProduct(product);
+  };
+
   // Handle category click - scroll to relevant section
   const handleCategoryClick = (category) => {
+    setActiveCategory(category.name);
     const targetRef = categoryRefs.current[category.name];
 
     if (targetRef) {
@@ -209,6 +218,7 @@ function App() {
             onAddToCart={handleAddToCart}
             cart={cart}
             searchQuery={searchQuery}
+            onProductClick={handleProductClick}
           />
         </React.Suspense>
       ) : (
@@ -217,7 +227,10 @@ function App() {
           <HeroBanner onOrderNowClick={handleOrderNowClick} />
 
           {/* Category Grid */}
-          <CategoryGrid onCategoryClick={handleCategoryClick} />
+          <CategoryGrid
+            onCategoryClick={handleCategoryClick}
+            activeCategory={activeCategory}
+          />
 
           {/* Today's Deals */}
           <PromoBanner />
@@ -240,6 +253,7 @@ function App() {
                       onAddToCart={handleAddToCart}
                       cart={cart}
                       searchQuery={searchQuery}
+                      onProductClick={handleProductClick}
                     />
                     {index === 1 && <FeaturesSection />}
                     {index === 4 && <DeliveryBanner />}
@@ -268,6 +282,15 @@ function App() {
 
       {/* Login Modal */}
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
+      {/* Product Details Modal */}
+      <ProductDetailsModal
+        product={selectedProduct}
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        onAddToCart={handleAddToCart}
+        cartQuantity={selectedProduct ? (cart[selectedProduct.id] || 0) : 0}
+      />
 
       {/* WhatsApp Floating Button */}
       <WhatsAppButton />

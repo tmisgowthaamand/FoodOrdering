@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import ProductCard from './ProductCard';
 
-const ProductCarousel = ({ title, products, onAddToCart, cart = {}, searchQuery = '' }) => {
+const ProductCarousel = ({ title, products, onAddToCart, cart = {}, searchQuery = '', onProductClick }) => {
   const scrollRef = useRef(null);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -85,6 +85,7 @@ const ProductCarousel = ({ title, products, onAddToCart, cart = {}, searchQuery 
                   onAddToCart={onAddToCart}
                   cartQuantity={cart[product.id] || 0}
                   searchQuery={searchQuery}
+                  onProductClick={onProductClick}
                 />
               </div>
             ))}

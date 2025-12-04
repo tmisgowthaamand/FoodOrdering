@@ -2,7 +2,7 @@ import React from 'react';
 import ProductCard from './ProductCard';
 import { Frown } from 'lucide-react';
 
-const SearchResults = ({ products, onAddToCart, cart, searchQuery }) => {
+const SearchResults = ({ products, onAddToCart, cart, searchQuery, onProductClick }) => {
     if (products.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
@@ -45,6 +45,7 @@ const SearchResults = ({ products, onAddToCart, cart, searchQuery }) => {
                         onAddToCart={onAddToCart}
                         cartQuantity={cart[product.id] || 0}
                         searchQuery={searchQuery}
+                        onProductClick={onProductClick}
                     />
                 ))}
             </div>
