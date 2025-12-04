@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Clock, CheckCircle, XCircle, Truck, MapPin, Phone, RefreshCw, ChevronRight } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import './MyOrders.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const MyOrders = ({ onBack }) => {
     const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [trackingData, setTrackingData] = useState(null);
-    const { user } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
+    const [orderToCancel, setOrderToCancel] = useState(null);
 
     useEffect(() => {
         fetchOrders();
@@ -21,7 +22,6 @@ const MyOrders = ({ onBack }) => {
             setLoading(true);
             const response = await fetch(`${API_BASE_URL}/api/orders`);
             const data = await response.json();
-            // Sort by most recent first
             const sortedOrders = data.sort((a, b) =>
                 new Date(b.created_at) - new Date(a.created_at)
             );
@@ -48,17 +48,25 @@ const MyOrders = ({ onBack }) => {
         fetchOrderTracking(order.id);
     };
 
-    const handleCancelOrder = async (orderId) => {
-        const reason = prompt('Please provide cancellation reason:');
-        if (!reason) return;
+    const handleCancelClick = (orderId) => {
+        setOrderToCancel(orderId);
+        setShowCancelModal(true);
+        setCancelReason('');
+    };
+
+    const handleCancelOrder = async () => {
+        if (!cancelReason.trim()) {
+            alert('Please provide a cancellation reason');
+            return;
+        }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/cancel`, {
+            const response = await fetch(`${API_BASE_URL}/api/orders/${orderToCancel}/cancel`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    order_id: orderId,
-                    cancellation_reason: reason,
+                    order_id: orderToCancel,
+                    cancellation_reason: cancelReason,
                     cancelled_by: 'customer'
                 })
             });
@@ -66,17 +74,20 @@ const MyOrders = ({ onBack }) => {
             const data = await response.json();
 
             if (data.success) {
+                setShowCancelModal(false);
                 alert('Order cancelled successfully!');
                 if (data.refund_initiated) {
                     alert(`Refund of ₹${data.refund.amount} will be processed in 5-7 business days`);
                 }
                 fetchOrders();
-                fetchOrderTracking(orderId);
+                if (trackingData) {
+                    fetchOrderTracking(orderToCancel);
+                }
             } else {
                 alert(data.detail || 'Failed to cancel order');
             }
         } catch (error) {
-            alert('Error cancelling order');
+            alert('Error cancelling order: ' + error.message);
         }
     };
 
@@ -139,7 +150,6 @@ const MyOrders = ({ onBack }) => {
                 </div>
 
                 <div className="order-details-container">
-                    {/* Order Status Card */}
                     <div className="status-card">
                         <div className="status-header" style={{ backgroundColor: getStatusColor(trackingData.order_status) }}>
                             {getStatusIcon(trackingData.order_status)}
@@ -149,7 +159,6 @@ const MyOrders = ({ onBack }) => {
                             </div>
                         </div>
 
-                        {/* Timeline */}
                         <div className="order-timeline">
                             <h3>Order Timeline</h3>
                             <div className="timeline-items">
@@ -217,7 +226,6 @@ const MyOrders = ({ onBack }) => {
                             </div>
                         </div>
 
-                        {/* Delivery Partner Info */}
                         {trackingData.delivery.partner_name && (
                             <div className="delivery-partner-info">
                                 <h3>Delivery Partner</h3>
@@ -234,17 +242,15 @@ const MyOrders = ({ onBack }) => {
                             </div>
                         )}
 
-                        {/* Cancel Button */}
                         {trackingData.can_cancel && (
                             <button
-                                onClick={() => handleCancelOrder(trackingData.order_id)}
+                                onClick={() => handleCancelClick(trackingData.order_id)}
                                 className="cancel-order-btn"
                             >
                                 Cancel Order
                             </button>
                         )}
 
-                        {/* Refund Info */}
                         {trackingData.refund && (
                             <div className="refund-info">
                                 <h3>Refund Information</h3>
@@ -267,7 +273,6 @@ const MyOrders = ({ onBack }) => {
                         )}
                     </div>
 
-                    {/* Order Items */}
                     <div className="order-items-card">
                         <h3>Order Items ({selectedOrder.items.length})</h3>
                         <div className="items-list">
@@ -286,7 +291,6 @@ const MyOrders = ({ onBack }) => {
                             ))}
                         </div>
 
-                        {/* Price Breakdown */}
                         <div className="price-breakdown">
                             <div className="price-row">
                                 <span>Item Total</span>
@@ -302,7 +306,6 @@ const MyOrders = ({ onBack }) => {
                             </div>
                         </div>
 
-                        {/* Delivery Address */}
                         <div className="delivery-address">
                             <h4>Delivery Address</h4>
                             <p><strong>{trackingData.customer.name}</strong></p>
@@ -311,7 +314,6 @@ const MyOrders = ({ onBack }) => {
                             <p>Phone: {trackingData.customer.phone}</p>
                         </div>
 
-                        {/* Payment Info */}
                         <div className="payment-info">
                             <h4>Payment Information</h4>
                             <div className="payment-row">
@@ -407,7 +409,6 @@ const MyOrders = ({ onBack }) => {
                                 {order.order_status === 'delivered' && (
                                     <button className="reorder-btn" onClick={(e) => {
                                         e.stopPropagation();
-                                        // Add reorder functionality
                                     }}>
                                         Reorder
                                     </button>
@@ -415,6 +416,37 @@ const MyOrders = ({ onBack }) => {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Custom Cancel Modal */}
+            {showCancelModal && (
+                <div className="modal-overlay" onClick={() => setShowCancelModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Cancel Order</h2>
+                            <button onClick={() => setShowCancelModal(false)} className="modal-close">×</button>
+                        </div>
+                        <div className="modal-body">
+                            <p>Please provide a reason for cancellation:</p>
+                            <textarea
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                placeholder="e.g., Changed my mind, Ordered by mistake, etc."
+                                rows="4"
+                                className="cancel-reason-input"
+                                autoFocus
+                            />
+                        </div>
+                        <div className="modal-footer">
+                            <button onClick={() => setShowCancelModal(false)} className="btn-secondary-modal">
+                                Keep Order
+                            </button>
+                            <button onClick={handleCancelOrder} className="btn-danger-modal">
+                                Cancel Order
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
