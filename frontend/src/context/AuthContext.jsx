@@ -10,6 +10,11 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     // Check for existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -33,6 +38,8 @@ export function AuthProvider({ children }) {
     setLoading(true);
     setError(null);
     try {
+      if (!supabase) throw new Error("Authentication service not configured");
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
