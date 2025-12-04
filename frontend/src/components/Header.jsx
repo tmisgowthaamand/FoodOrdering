@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, MapPin, User, ShoppingCart, ChevronDown, Menu, X, LogOut, AlertCircle, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
