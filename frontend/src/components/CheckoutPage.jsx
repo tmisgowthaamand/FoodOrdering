@@ -90,11 +90,11 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
       toast.error('Please fill all required fields');
       return false;
     }
-    if (phone.length < 10) {
+    if (String(phone).length < 10) {
       toast.error('Please enter a valid phone number');
       return false;
     }
-    if (pincode.length !== 6) {
+    if (String(pincode).length !== 6) {
       toast.error('Please enter a valid 6-digit pincode');
       return false;
     }
@@ -136,7 +136,7 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
 
   const handleDeleteAddress = async (addressId, e) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this address?')) return;
+    // Removed confirmation dialog as requested
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/addresses/${addressId}`, {
@@ -167,7 +167,9 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
   const selectAddress = (addr) => {
     setCustomerInfo({
       ...addr,
-      email: customerInfo.email || '' // Preserve email if entered
+      name: addr.name || 'Guest', // Fallback if name is missing
+      pincode: String(addr.pincode), // Ensure pincode is string
+      email: customerInfo.email || addr.email || '' // Preserve email if entered
     });
   };
 
