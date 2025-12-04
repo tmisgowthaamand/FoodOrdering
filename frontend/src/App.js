@@ -18,6 +18,7 @@ import WhatsAppButton from './components/WhatsAppButton';
 // Lazy load components for performance
 const CheckoutPage = React.lazy(() => import('./components/CheckoutPage'));
 const SearchResults = React.lazy(() => import('./components/SearchResults'));
+const OrderTestingPage = React.lazy(() => import('./components/OrderTestingPage'));
 const PrivacyPolicy = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.PrivacyPolicy })));
 const TermsConditions = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.TermsConditions })));
 const ShippingPolicy = React.lazy(() => import('./components/PolicyPages').then(module => ({ default: module.ShippingPolicy })));
@@ -52,6 +53,27 @@ function App() {
   React.useEffect(() => {
     window.scrollTo(0, 0);
   }, [currentPage]);
+
+  // Keyboard shortcut to access testing page (Ctrl+Shift+T)
+  React.useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+        setCurrentPage('order-testing');
+        toast.info('🧪 Opening Order Testing Dashboard', {
+          description: 'Press Ctrl+Shift+H to return home',
+          duration: 3000,
+        });
+      }
+      if (e.ctrlKey && e.shiftKey && e.key === 'H') {
+        setCurrentPage('home');
+        toast.info('🏠 Returning to Home', {
+          duration: 2000,
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
 
   // Refs for products sections
   const productsSectionRef = useRef(null);
@@ -160,6 +182,7 @@ function App() {
   if (currentPage === 'terms') return <React.Suspense fallback={<Loader />}><TermsConditions onBack={handleBackToHome} /></React.Suspense>;
   if (currentPage === 'shipping') return <React.Suspense fallback={<Loader />}><ShippingPolicy onBack={handleBackToHome} /></React.Suspense>;
   if (currentPage === 'refund') return <React.Suspense fallback={<Loader />}><RefundPolicy onBack={handleBackToHome} /></React.Suspense>;
+  if (currentPage === 'order-testing') return <React.Suspense fallback={<Loader />}><OrderTestingPage /></React.Suspense>;
 
   return (
     <div className="min-h-screen bg-white">

@@ -8,7 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import razorpay
 from supabase import create_client, Client
 import json
@@ -122,6 +122,22 @@ class VerifyPaymentRequest(BaseModel):
     razorpay_payment_id: str
     razorpay_signature: str
     order_id: str
+
+class CancelOrderRequest(BaseModel):
+    order_id: str
+    cancellation_reason: str
+    cancelled_by: str = "customer"  # 'customer', 'restaurant', 'admin'
+
+class UpdateOrderStatusRequest(BaseModel):
+    status: str
+    delivery_partner_name: Optional[str] = None
+    delivery_partner_phone: Optional[str] = None
+    estimated_delivery_time: Optional[str] = None
+
+class DeliveryLocationUpdate(BaseModel):
+    latitude: float
+    longitude: float
+    delivery_partner_name: Optional[str] = None
 
 
 # Add your routes to the router instead of directly to app
@@ -314,18 +330,52 @@ async def get_all_orders():
 
 
 @api_router.patch("/orders/{order_id}/status")
-async def update_order_status(order_id: str, status: str):
-    """Update order status in Supabase"""
+async def update_order_status(order_id: str, status_data: UpdateOrderStatusRequest):
+    """Update order status with delivery tracking information"""
     try:
-        result = supabase.table('orders').update({
-            "order_status": status,
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }).eq('id', order_id).execute()
-        
+        # Get current order
+        result = supabase.table('orders').select('*').eq('id', order_id).execute()
         if not result.data or len(result.data) == 0:
             raise HTTPException(status_code=404, detail="Order not found")
         
-        return {"success": True, "message": "Order status updated"}
+        current_order = result.data[0]
+        
+        # Prepare update data
+        update_data = {
+            "order_status": status_data.status,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Add timestamp for specific status changes
+        status_timestamp_map = {
+            "confirmed": "confirmed_at",
+            "preparing": "preparing_at",
+            "ready_for_pickup": "ready_at",
+            "out_for_delivery": "out_for_delivery_at",
+            "delivered": "delivered_at"
+        }
+        
+        if status_data.status in status_timestamp_map:
+            update_data[status_timestamp_map[status_data.status]] = datetime.now(timezone.utc).isoformat()
+        
+        # Add delivery partner info if provided
+        if status_data.delivery_partner_name:
+            update_data["delivery_partner_name"] = status_data.delivery_partner_name
+        if status_data.delivery_partner_phone:
+            update_data["delivery_partner_phone"] = status_data.delivery_partner_phone
+        if status_data.estimated_delivery_time:
+            update_data["estimated_delivery_time"] = status_data.estimated_delivery_time
+        
+        # Update in Supabase
+        result = supabase.table('orders').update(update_data).eq('id', order_id).execute()
+        
+        logger.info(f"Order {order_id} status updated to {status_data.status}")
+        
+        return {
+            "success": True, 
+            "message": f"Order status updated to {status_data.status}",
+            "order": result.data[0] if result.data else None
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -333,16 +383,331 @@ async def update_order_status(order_id: str, status: str):
         raise HTTPException(status_code=500, detail=f"Failed to update order status: {str(e)}")
 
 
-# Include the router in the main app
-app.include_router(api_router)
+@api_router.post("/orders/{order_id}/cancel")
+async def cancel_order(order_id: str, cancel_data: CancelOrderRequest):
+    """Cancel order and initiate refund if payment was made"""
+    try:
+        # Get current order
+        result = supabase.table('orders').select('*').eq('id', order_id).execute()
+        if not result.data or len(result.data) == 0:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        order = result.data[0]
+        
+        # Check if order can be cancelled
+        current_status = order.get('order_status', '')
+        payment_method = order.get('payment_method', '')
+        payment_status = order.get('payment_status', '')
+        created_at = datetime.fromisoformat(order.get('created_at', '').replace('Z', '+00:00'))
+        time_elapsed = (datetime.now(timezone.utc) - created_at).total_seconds() / 60  # minutes
+        
+        # Define cancellation rules
+        non_cancellable_statuses = ['ready_for_pickup', 'out_for_delivery', 'nearby', 'delivered']
+        
+        if current_status in non_cancellable_statuses:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot cancel order in '{current_status}' status. Please contact support."
+            )
+        
+        # Check time-based restrictions
+        if current_status == 'confirmed' and time_elapsed > 2:
+            raise HTTPException(
+                status_code=400,
+                detail="Cancellation window expired. Orders can only be cancelled within 2 minutes of confirmation."
+            )
+        
+        if current_status == 'preparing':
+            preparing_at = order.get('preparing_at')
+            if preparing_at:
+                preparing_time = datetime.fromisoformat(preparing_at.replace('Z', '+00:00'))
+                preparing_elapsed = (datetime.now(timezone.utc) - preparing_time).total_seconds() / 60
+                if preparing_elapsed > 5:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Cannot cancel order after 5 minutes of preparation. Please contact support."
+                    )
+        
+        # Prepare cancellation data
+        cancel_update = {
+            "order_status": "cancelled",
+            "cancelled_at": datetime.now(timezone.utc).isoformat(),
+            "cancellation_reason": cancel_data.cancellation_reason,
+            "cancelled_by": cancel_data.cancelled_by,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Initiate refund if payment was made via Razorpay
+        refund_initiated = False
+        refund_details = None
+        
+        if payment_method == 'razorpay' and payment_status == 'paid':
+            razorpay_payment_id = order.get('razorpay_payment_id')
+            total_amount = order.get('total_amount', 0)
+            
+            if razorpay_payment_id:
+                try:
+                    # Create refund in Razorpay
+                    refund = razorpay_client.payment.refund(
+                        razorpay_payment_id,
+                        {
+                            "amount": int(total_amount * 100),  # Convert to paise
+                            "speed": "normal",  # 'normal' or 'optimum'
+                            "notes": {
+                                "reason": cancel_data.cancellation_reason,
+                                "order_id": order_id
+                            }
+                        }
+                    )
+                    
+                    refund_initiated = True
+                    refund_details = refund
+                    
+                    # Update order with refund details
+                    cancel_update.update({
+                        "refund_id": refund['id'],
+                        "refund_status": refund['status'],  # 'pending', 'processed'
+                        "refund_amount": total_amount,
+                        "payment_status": "refunded"
+                    })
+                    
+                    logger.info(f"Refund initiated for order {order_id}: {refund['id']}")
+                    
+                except razorpay.errors.BadRequestError as e:
+                    logger.error(f"Razorpay refund error: {str(e)}")
+                    # Still cancel the order but mark refund as failed
+                    cancel_update.update({
+                        "refund_status": "failed",
+                        "refund_error": str(e)
+                    })
+                except Exception as e:
+                    logger.error(f"Unexpected refund error: {str(e)}")
+                    cancel_update.update({
+                        "refund_status": "failed",
+                        "refund_error": str(e)
+                    })
+        
+        # Update order in database
+        result = supabase.table('orders').update(cancel_update).eq('id', order_id).execute()
+        
+        response_data = {
+            "success": True,
+            "message": "Order cancelled successfully",
+            "order_id": order_id,
+            "refund_initiated": refund_initiated
+        }
+        
+        if refund_initiated and refund_details:
+            response_data["refund"] = {
+                "refund_id": refund_details['id'],
+                "amount": refund_details['amount'] / 100,  # Convert back to rupees
+                "status": refund_details['status'],
+                "expected_at": "5-7 business days"
+            }
+        elif payment_method == 'cod':
+            response_data["message"] = "COD order cancelled successfully. No refund needed."
+        
+        return response_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error cancelling order: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to cancel order: {str(e)}")
 
+
+@api_router.get("/orders/{order_id}/refund-status")
+async def get_refund_status(order_id: str):
+    """Get refund status for a cancelled order"""
+    try:
+        result = supabase.table('orders').select('*').eq('id', order_id).execute()
+        
+        if not result.data or len(result.data) == 0:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        order = result.data[0]
+        refund_id = order.get('refund_id')
+        
+        if not refund_id:
+            return {
+                "order_id": order_id,
+                "refund_status": "no_refund",
+                "message": "No refund initiated for this order"
+            }
+        
+        # Fetch latest refund status from Razorpay
+        try:
+            refund = razorpay_client.refund.fetch(refund_id)
+            
+            # Update local database with latest status
+            if refund['status'] != order.get('refund_status'):
+                supabase.table('orders').update({
+                    "refund_status": refund['status'],
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }).eq('id', order_id).execute()
+            
+            return {
+                "order_id": order_id,
+                "refund_id": refund_id,
+                "refund_status": refund['status'],
+                "refund_amount": refund['amount'] / 100,
+                "created_at": refund.get('created_at'),
+                "message": "Refund will be credited to your account within 5-7 business days"
+            }
+        except Exception as e:
+            logger.error(f"Error fetching refund status from Razorpay: {str(e)}")
+            # Return cached status from database
+            return {
+                "order_id": order_id,
+                "refund_id": refund_id,
+                "refund_status": order.get('refund_status', 'unknown'),
+                "refund_amount": order.get('refund_amount', 0),
+                "message": "Using cached refund status"
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting refund status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get refund status: {str(e)}")
+
+
+@api_router.post("/orders/{order_id}/delivery-location")
+async def update_delivery_location(order_id: str, location_data: DeliveryLocationUpdate):
+    """Update delivery partner's current location for live tracking"""
+    try:
+        location_json = {
+            "lat": location_data.latitude,
+            "lng": location_data.longitude,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        update_data = {
+            "delivery_partner_location": json.dumps(location_json),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        if location_data.delivery_partner_name:
+            update_data["delivery_partner_name"] = location_data.delivery_partner_name
+        
+        result = supabase.table('orders').update(update_data).eq('id', order_id).execute()
+        
+        if not result.data or len(result.data) == 0:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        return {
+            "success": True,
+            "message": "Delivery location updated",
+            "location": location_json
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating delivery location: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update delivery location: {str(e)}")
+
+
+@api_router.get("/orders/{order_id}/tracking")
+async def get_order_tracking(order_id: str):
+    """Get complete order tracking information including delivery status and location"""
+    try:
+        result = supabase.table('orders').select('*').eq('id', order_id).execute()
+        
+        if not result.data or len(result.data) == 0:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        order = result.data[0]
+        
+        # Parse delivery location if available
+        delivery_location = None
+        if order.get('delivery_partner_location'):
+            try:
+                delivery_location = json.loads(order['delivery_partner_location'])
+            except:
+                pass
+        
+        # Determine if cancellation is allowed
+        can_cancel = False
+        cancel_deadline = None
+        current_status = order.get('order_status', '')
+        
+        if current_status not in ['ready_for_pickup', 'out_for_delivery', 'nearby', 'delivered', 'cancelled']:
+            can_cancel = True
+            
+            # Calculate deadline for cancellation
+            if current_status == 'confirmed':
+                confirmed_at = order.get('confirmed_at')
+                if confirmed_at:
+                    confirmed_time = datetime.fromisoformat(confirmed_at.replace('Z', '+00:00'))
+                    cancel_deadline = (confirmed_time + timedelta(minutes=2)).isoformat()
+            elif current_status == 'preparing':
+                preparing_at = order.get('preparing_at')
+                if preparing_at:
+                    preparing_time = datetime.fromisoformat(preparing_at.replace('Z', '+00:00'))
+                    cancel_deadline = (preparing_time + timedelta(minutes=5)).isoformat()
+        
+        # Build tracking response
+        tracking_data = {
+            "order_id": order_id,
+            "order_status": current_status,
+            "payment_status": order.get('payment_status'),
+            "payment_method": order.get('payment_method'),
+            "total_amount": order.get('total_amount'),
+            "can_cancel": can_cancel,
+            "cancel_deadline": cancel_deadline,
+            "timeline": {
+                "created_at": order.get('created_at'),
+                "confirmed_at": order.get('confirmed_at'),
+                "preparing_at": order.get('preparing_at'),
+                "ready_at": order.get('ready_at'),
+                "out_for_delivery_at": order.get('out_for_delivery_at'),
+                "delivered_at": order.get('delivered_at'),
+                "cancelled_at": order.get('cancelled_at')
+            },
+            "delivery": {
+                "partner_name": order.get('delivery_partner_name'),
+                "partner_phone": order.get('delivery_partner_phone'),
+                "current_location": delivery_location,
+                "estimated_delivery_time": order.get('estimated_delivery_time')
+            },
+            "customer": {
+                "name": order.get('customer_name'),
+                "phone": order.get('customer_phone'),
+                "address": order.get('customer_address'),
+                "city": order.get('customer_city'),
+                "pincode": order.get('customer_pincode')
+            }
+        }
+        
+        # Add refund info if order is cancelled
+        if current_status == 'cancelled':
+            tracking_data["refund"] = {
+                "refund_id": order.get('refund_id'),
+                "refund_status": order.get('refund_status'),
+                "refund_amount": order.get('refund_amount'),
+                "cancellation_reason": order.get('cancellation_reason'),
+                "cancelled_by": order.get('cancelled_by')
+            }
+        
+        return tracking_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting order tracking: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get order tracking: {str(e)}")
+
+
+# Add CORS middleware BEFORE including routers
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include the router in the main app
+app.include_router(api_router)
 
 # @app.on_event("shutdown")
 # async def shutdown_db_client():
