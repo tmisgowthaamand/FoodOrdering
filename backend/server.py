@@ -724,9 +724,10 @@ async def get_user_addresses(user_id: str):
         result = supabase.table('user_addresses').select('*').eq('user_id', user_id).execute()
         return result.data
     except Exception as e:
-        logger.error(f"Error fetching addresses: {str(e)}")
-        # If table doesn't exist, return empty list instead of crashing
-        if "relation \"user_addresses\" does not exist" in str(e):
+        error_str = str(e)
+        logger.error(f"Error fetching addresses: {error_str}")
+        # If table doesn't exist (Postgres error 42P01), return empty list instead of crashing
+        if "42P01" in error_str or ("relation" in error_str and "does not exist" in error_str):
             return []
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -743,7 +744,10 @@ async def save_user_address(address: UserAddress):
         result = supabase.table('user_addresses').insert(data).execute()
         return {"success": True, "data": result.data}
     except Exception as e:
-        logger.error(f"Error saving address: {str(e)}")
+        error_str = str(e)
+        logger.error(f"Error saving address: {error_str}")
+        if "42P01" in error_str or ("relation" in error_str and "does not exist" in error_str):
+             raise HTTPException(status_code=503, detail="Database table 'user_addresses' missing. Please run database_setup.sql.")
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.delete("/addresses/{address_id}")
@@ -753,7 +757,10 @@ async def delete_user_address(address_id: str):
         result = supabase.table('user_addresses').delete().eq('id', address_id).execute()
         return {"success": True}
     except Exception as e:
-        logger.error(f"Error deleting address: {str(e)}")
+        error_str = str(e)
+        logger.error(f"Error deleting address: {error_str}")
+        if "42P01" in error_str or ("relation" in error_str and "does not exist" in error_str):
+             raise HTTPException(status_code=503, detail="Database table 'user_addresses' missing. Please run database_setup.sql.")
         raise HTTPException(status_code=500, detail=str(e))
 
 

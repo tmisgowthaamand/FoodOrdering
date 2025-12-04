@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from './ui/dialog';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -277,12 +278,12 @@ const LoginModal = ({ isOpen, onClose }) => {
               {mode === 'signup' && 'Create Account'}
               {mode === 'otp' && 'Verify OTP'}
             </DialogTitle>
+            <DialogDescription className="text-purple-200 mt-1">
+              {mode === 'login' && 'Login to get groceries in 10 minutes'}
+              {mode === 'signup' && 'Join us for amazing deals'}
+              {mode === 'otp' && `We sent a code to +91 ${phone}`}
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-purple-200 mt-1">
-            {mode === 'login' && 'Login to get groceries in 10 minutes'}
-            {mode === 'signup' && 'Join us for amazing deals'}
-            {mode === 'otp' && `We sent a code to +91 ${phone}`}
-          </p>
         </div>
 
         <div className="p-6">
@@ -325,8 +326,8 @@ const LoginModal = ({ isOpen, onClose }) => {
                 <button
                   onClick={() => setAuthMethod('email')}
                   className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all ${authMethod === 'email'
-                      ? 'bg-white text-[#8B2FC9] shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-[#8B2FC9] shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
                     }`}
                 >
                   <Mail className="w-4 h-4 inline mr-2" />
@@ -335,8 +336,8 @@ const LoginModal = ({ isOpen, onClose }) => {
                 <button
                   onClick={() => setAuthMethod('phone')}
                   className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all ${authMethod === 'phone'
-                      ? 'bg-white text-[#8B2FC9] shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-[#8B2FC9] shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
                     }`}
                 >
                   <Phone className="w-4 h-4 inline mr-2" />
@@ -457,8 +458,8 @@ const LoginModal = ({ isOpen, onClose }) => {
                 <button
                   onClick={() => setAuthMethod('email')}
                   className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all ${authMethod === 'email'
-                      ? 'bg-white text-[#8B2FC9] shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-[#8B2FC9] shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
                     }`}
                 >
                   <Mail className="w-4 h-4 inline mr-2" />
@@ -467,8 +468,8 @@ const LoginModal = ({ isOpen, onClose }) => {
                 <button
                   onClick={() => setAuthMethod('phone')}
                   className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all ${authMethod === 'phone'
-                      ? 'bg-white text-[#8B2FC9] shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-[#8B2FC9] shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
                     }`}
                 >
                   <Phone className="w-4 h-4 inline mr-2" />
