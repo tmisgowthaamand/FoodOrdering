@@ -1,0 +1,180 @@
+.live-tracking-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    background: #f8f9fa;
+    overflow: hidden;
+}
+
+.map-wrapper {
+    flex: 1;
+    width: 100%;
+    height: 60vh;
+    /* Takes up top part */
+    position: relative;
+}
+
+.map-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    background: #eee;
+    color: #666;
+    font-weight: 500;
+}
+
+.live-status-badge {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #d32f2f;
+    z-index: 10;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: #d32f2f;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(211, 47, 47, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(211, 47, 47, 0);
+    }
+}
+
+.tracking-sheet {
+    background: white;
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    position: relative;
+    margin-top: -20px;
+    /* Overlap map slightly */
+    z-index: 20;
+}
+
+.sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: #e0e0e0;
+    border-radius: 2px;
+    margin: 0 auto 20px;
+}
+
+.status-header-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.status-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    background: #f5f5f5;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-text h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.status-text p {
+    margin: 4px 0 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.tracking-progress-bar {
+    height: 6px;
+    background: #f0f0f0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8B2FC9, #bc6ff1);
+    border-radius: 3px;
+    transition: width 1s ease;
+}
+
+.driver-info-card {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    background: #f9f9f9;
+    border-radius: 16px;
+    gap: 16px;
+}
+
+.driver-avatar img {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.driver-details {
+    flex: 1;
+}
+
+.driver-details h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: #333;
+}
+
+.driver-details p {
+    margin: 2px 0 0;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.call-driver-btn {
+    width: 40px;
+    height: 40px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8B2FC9;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+
+.call-driver-btn:hover {
+    transform: scale(1.1);
+    background: #8B2FC9;
+    color: white;
+}

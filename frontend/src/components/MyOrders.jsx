@@ -162,127 +162,13 @@ const MyOrders = ({ onBack }) => {
                 </div>
 
                 <div className="order-details-container">
-                    <div className="status-card">
-                        <div className="status-header" style={{ backgroundColor: getStatusColor(trackingData.order_status) }}>
-                            {getStatusIcon(trackingData.order_status)}
-                            <div>
-                                <h2>{trackingData.order_status.replace(/_/g, ' ').toUpperCase()}</h2>
-                                <p>{formatDate(trackingData.timeline.created_at)}</p>
-                            </div>
-                        </div>
-
-                        <div className="order-timeline">
-                            <h3>Order Timeline</h3>
-                            <div className="timeline-items">
-                                {trackingData.timeline.created_at && (
-                                    <div className="timeline-item completed">
-                                        <div className="timeline-dot"></div>
-                                        <div className="timeline-content">
-                                            <strong>Order Placed</strong>
-                                            <span>{new Date(trackingData.timeline.created_at).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                )}
-                                {trackingData.timeline.confirmed_at && (
-                                    <div className="timeline-item completed">
-                                        <div className="timeline-dot"></div>
-                                        <div className="timeline-content">
-                                            <strong>Order Confirmed</strong>
-                                            <span>{new Date(trackingData.timeline.confirmed_at).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                )}
-                                {trackingData.timeline.preparing_at && (
-                                    <div className="timeline-item completed">
-                                        <div className="timeline-dot"></div>
-                                        <div className="timeline-content">
-                                            <strong>Preparing</strong>
-                                            <span>{new Date(trackingData.timeline.preparing_at).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                )}
-                                {trackingData.timeline.out_for_delivery_at && (
-                                    <div className="timeline-item completed">
-                                        <div className="timeline-dot"></div>
-                                        <div className="timeline-content">
-                                            <strong>Out for Delivery</strong>
-                                            <span>{new Date(trackingData.timeline.out_for_delivery_at).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                )}
-                                {trackingData.timeline.delivered_at ? (
-                                    <div className="timeline-item completed">
-                                        <div className="timeline-dot"></div>
-                                        <div className="timeline-content">
-                                            <strong>Delivered</strong>
-                                            <span>{new Date(trackingData.timeline.delivered_at).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                ) : trackingData.timeline.cancelled_at ? (
-                                    <div className="timeline-item cancelled">
-                                        <div className="timeline-dot"></div>
-                                        <div className="timeline-content">
-                                            <strong>Cancelled</strong>
-                                            <span>{new Date(trackingData.timeline.cancelled_at).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="timeline-item pending">
-                                        <div className="timeline-dot"></div>
-                                        <div className="timeline-content">
-                                            <strong>Delivery</strong>
-                                            <span>Pending</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {trackingData.delivery.partner_name && (
-                            <div className="delivery-partner-info">
-                                <h3>Delivery Partner</h3>
-                                <div className="partner-details">
-                                    <div className="partner-name">
-                                        <Truck size={20} />
-                                        <span>{trackingData.delivery.partner_name}</span>
-                                    </div>
-                                    <a href={`tel:${trackingData.delivery.partner_phone}`} className="partner-phone">
-                                        <Phone size={18} />
-                                        Call Partner
-                                    </a>
-                                </div>
-                            </div>
-                        )}
-
-                        {trackingData.can_cancel && (
-                            <button
-                                onClick={(e) => handleCancelClick(trackingData.order_id, e)}
-                                className="cancel-order-btn"
-                            >
-                                Cancel Order
-                            </button>
-                        )}
-
-                        {trackingData.refund && (
-                            <div className="refund-info">
-                                <h3>Refund Information</h3>
-                                <div className="refund-details">
-                                    <div className="refund-row">
-                                        <span>Refund ID:</span>
-                                        <strong>{trackingData.refund.refund_id}</strong>
-                                    </div>
-                                    <div className="refund-row">
-                                        <span>Amount:</span>
-                                        <strong>₹{trackingData.refund.refund_amount}</strong>
-                                    </div>
-                                    <div className="refund-row">
-                                        <span>Status:</span>
-                                        <strong className="refund-status">{trackingData.refund.refund_status}</strong>
-                                    </div>
-                                    <p className="refund-note">Refund will be credited within 5-7 business days</p>
-                                </div>
-                            </div>
-                        )}
+                    {/* Live Tracking Section */}
+                    <div className="tracking-section-wrapper" style={{ height: '500px', marginBottom: '2rem' }}>
+                        <LiveOrderTracking
+                            order={selectedOrder}
+                            trackingData={trackingData}
+                            onCancel={(e) => handleCancelClick(trackingData.order_id, e)}
+                        />
                     </div>
 
                     <div className="order-items-card">
