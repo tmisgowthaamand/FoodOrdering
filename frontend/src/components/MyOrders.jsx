@@ -340,6 +340,37 @@ const MyOrders = ({ onBack }) => {
                         </div>
                     </div>
                 </div>
+
+                {/* Custom Cancel Modal - Included in Details View */}
+                {showCancelModal && (
+                    <div className="modal-overlay" onClick={() => setShowCancelModal(false)}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h2>Cancel Order</h2>
+                                <button onClick={() => setShowCancelModal(false)} className="modal-close">×</button>
+                            </div>
+                            <div className="modal-body">
+                                <p>Please provide a reason for cancellation:</p>
+                                <textarea
+                                    value={cancelReason}
+                                    onChange={(e) => setCancelReason(e.target.value)}
+                                    placeholder="e.g., Changed my mind, Ordered by mistake, etc."
+                                    rows="4"
+                                    className="cancel-reason-input"
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="modal-footer">
+                                <button onClick={() => setShowCancelModal(false)} className="btn-secondary-modal">
+                                    Keep Order
+                                </button>
+                                <button onClick={handleCancelOrder} className="btn-danger-modal">
+                                    Cancel Order
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
