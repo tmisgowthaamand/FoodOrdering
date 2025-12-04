@@ -11,11 +11,18 @@ export function AuthProvider({ children }) {
 
   const fetchUserRole = async (userId) => {
     try {
-      const { data, error } = await supabase
+      // Add a timeout to prevent infinite loading if DB is locked or slow
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+
+      const fetchPromise = supabase
         .from('users')
         .select('role')
         .eq('id', userId)
         .single();
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (error) {
         console.warn('Error fetching user role:', error.message);
