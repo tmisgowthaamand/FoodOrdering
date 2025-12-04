@@ -329,10 +329,15 @@ async def get_order(order_id: str):
 
 
 @api_router.get("/orders")
-async def get_all_orders():
-    """Get all orders from Supabase"""
+async def get_all_orders(user_id: Optional[str] = None):
+    """Get all orders from Supabase, optionally filtered by user_id"""
     try:
-        result = supabase.table('orders').select('*').order('created_at', desc=True).execute()
+        query = supabase.table('orders').select('*').order('created_at', desc=True)
+        
+        if user_id:
+            query = query.eq('user_id', user_id)
+            
+        result = query.execute()
         return result.data
     except Exception as e:
         logger.error(f"Error fetching orders from Supabase: {str(e)}")

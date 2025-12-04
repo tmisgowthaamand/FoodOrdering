@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, MapPin, User, ShoppingCart, ChevronDown, Menu, X, LogOut, AlertCircle, Package } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -108,6 +109,20 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick, onMyOrdersClick, sea
     );
   };
 
+  const [hasGuestId, setHasGuestId] = useState(false);
+
+  useEffect(() => {
+    const checkGuestId = () => {
+      const guestId = localStorage.getItem('foodeo_user_id');
+      setHasGuestId(!!guestId);
+    };
+
+    checkGuestId();
+    // Listen for storage changes in case order is placed in another tab/window
+    window.addEventListener('storage', checkGuestId);
+    return () => window.removeEventListener('storage', checkGuestId);
+  }, []);
+
   const { user, isAuthenticated, signOut, loading } = useAuth();
 
   // Get display name from user
@@ -126,6 +141,9 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick, onMyOrdersClick, sea
 
   const handleSignOut = async () => {
     await signOut();
+    localStorage.removeItem('foodeo_user_id');
+    setHasGuestId(false);
+    toast.success('Signed out successfully');
   };
 
   const handleLocationSelect = (locationData) => {
@@ -328,7 +346,7 @@ const Header = ({ cartCount = 0, onCartClick, onLoginClick, onMyOrdersClick, sea
 
 
             {/* My Orders Button */}
-            {onMyOrdersClick && (
+            {onMyOrdersClick && (isAuthenticated || hasGuestId) && (
               <Button
                 variant="ghost"
                 onClick={onMyOrdersClick}

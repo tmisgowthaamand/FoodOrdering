@@ -5,6 +5,7 @@ import './MyOrders.css';
 import './MyOrdersModal.css';
 import { API_BASE_URL } from '../config';
 import LiveOrderTracking from './LiveOrderTracking';
+import { useAuth } from '../context/AuthContext';
 
 const MyOrders = ({ onBack }) => {
     const [orders, setOrders] = useState([]);
@@ -15,9 +16,11 @@ const MyOrders = ({ onBack }) => {
     const [cancelReason, setCancelReason] = useState('');
     const [orderToCancel, setOrderToCancel] = useState(null);
 
+    const { user } = useAuth();
+
     useEffect(() => {
         fetchOrders();
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         console.log('Modal state changed:', showCancelModal);
@@ -27,7 +30,18 @@ const MyOrders = ({ onBack }) => {
     const fetchOrders = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_BASE_URL}/api/orders`);
+            const userId = user?.id || localStorage.getItem('foodeo_user_id');
+
+            // If no user ID, we can't fetch specific orders
+            if (!userId) {
+                setOrders([]);
+                setLoading(false);
+                return;
+            }
+
+            const url = `${API_BASE_URL}/api/orders?user_id=${userId}`;
+
+            const response = await fetch(url);
             const data = await response.json();
             const sortedOrders = data.sort((a, b) =>
                 new Date(b.created_at) - new Date(a.created_at)

@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { products } from '../data/mockData';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../config';
+import { useAuth } from '../context/AuthContext';
 
 const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
   const [step, setStep] = useState(1); // 1: Address, 2: Payment, 3: Success
@@ -16,6 +17,8 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [userId, setUserId] = useState('');
+
+  const { user } = useAuth();
 
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
@@ -29,14 +32,19 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
 
   // Initialize User ID
   useEffect(() => {
-    let storedUserId = localStorage.getItem('foodeo_user_id');
-    if (!storedUserId) {
-      storedUserId = 'guest_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('foodeo_user_id', storedUserId);
+    let effectiveUserId = user?.id;
+
+    if (!effectiveUserId) {
+      effectiveUserId = localStorage.getItem('foodeo_user_id');
+      if (!effectiveUserId) {
+        effectiveUserId = 'guest_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('foodeo_user_id', effectiveUserId);
+      }
     }
-    setUserId(storedUserId);
-    fetchAddresses(storedUserId);
-  }, []);
+
+    setUserId(effectiveUserId);
+    fetchAddresses(effectiveUserId);
+  }, [user]);
 
   const fetchAddresses = async (uid) => {
     try {
@@ -411,8 +419,8 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
                         key={addr.id}
                         onClick={() => selectAddress(addr)}
                         className={`p-4 border rounded-xl cursor-pointer transition-all ${customerInfo.address === addr.address
-                            ? 'border-[#8B2FC9] bg-purple-50 ring-1 ring-[#8B2FC9]'
-                            : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-[#8B2FC9] bg-purple-50 ring-1 ring-[#8B2FC9]'
+                          : 'border-gray-200 hover:border-gray-300'
                           }`}
                       >
                         <div className="flex justify-between items-start">
@@ -445,8 +453,8 @@ const CheckoutPage = ({ cart, onBack, onOrderSuccess, onUpdateCart }) => {
                           key={label}
                           onClick={() => setCustomerInfo(prev => ({ ...prev, label }))}
                           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${customerInfo.label === label
-                              ? 'bg-[#8B2FC9] text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            ? 'bg-[#8B2FC9] text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                         >
                           {label}
