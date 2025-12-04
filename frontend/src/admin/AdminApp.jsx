@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './pages/AdminDashboard';
 import ProductManager from './pages/ProductManager';
+import OrderManager from './pages/OrderManager';
+import CustomerManager from './pages/CustomerManager';
+import Settings from './pages/Settings';
 
 const AdminApp = () => {
     const [activePage, setActivePage] = useState('dashboard');
@@ -10,9 +13,9 @@ const AdminApp = () => {
         switch (activePage) {
             case 'dashboard': return <AdminDashboard />;
             case 'products': return <ProductManager />;
-            case 'orders': return <div className="text-center py-20 text-gray-500">Orders Management Coming Soon</div>;
-            case 'customers': return <div className="text-center py-20 text-gray-500">Customer Management Coming Soon</div>;
-            case 'settings': return <div className="text-center py-20 text-gray-500">Settings Coming Soon</div>;
+            case 'orders': return <OrderManager />;
+            case 'customers': return <CustomerManager />;
+            case 'settings': return <Settings />;
             default: return <AdminDashboard />;
         }
     };
